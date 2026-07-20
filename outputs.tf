@@ -3,11 +3,6 @@ output "name" {
   value       = azurerm_virtual_network.this.name
 }
 
-output "resource_group" {
-  description = "The resource group in which the virtual network is created"
-  value       = azurerm_resource_group.this
-}
-
 output "vnet_id" {
   description = "The ID of the virtual network"
   value       = azurerm_virtual_network.this.id
