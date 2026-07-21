@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v0.5.2...v1.0.0) (2026-07-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove rsg creation ([#3](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/issues/3))
+
+### chore
+
+* remove rsg creation ([#3](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/issues/3)) ([4e8210b](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/commit/4e8210ba94d2b3b704a1fd67d484cd014c258da8))
+
 ## [0.5.2](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v0.5.1...v0.5.2) (2026-02-16)
 
 
@@ -119,4 +130,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🚀 Features
 
 * adding first version of the module ([#1](https://github.com/schubergphilis/terraform-azure-mcaf-network/pull/1)) ([a566ad7](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/commit/a566ad70cff521ab3404850567744947f7a25fa7))
-
