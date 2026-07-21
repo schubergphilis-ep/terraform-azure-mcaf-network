@@ -1,12 +1,6 @@
-provider "azurerm" {
-  features {}
-
-  subscription_id = "00000000-0000-0000-0000-000000000000"
-}
+mock_provider "azurerm" {}
 
 variables {
-  source = "../.."
-
   resource_group_name = "example-rsg"
 
   vnet_name          = "my-vnet"
@@ -38,17 +32,26 @@ variables {
   }
 }
 
-run "setup" {
-  module {
-    source = "./"
-  }
-}
-
 run "plan" {
   command = plan
 
   assert {
-    condition     = output.resource_group == "my-rg"
-    error_message = "Unexpected output.resource_group value"
+    condition     = azurerm_resource_group.this.name == "example-rsg"
+    error_message = "Unexpected resource group name"
+  }
+
+  assert {
+    condition     = azurerm_virtual_network.this.name == "my-vnet"
+    error_message = "Unexpected virtual network name"
+  }
+
+  assert {
+    condition     = contains(azurerm_virtual_network.this.address_space, "10.0.0.0/8")
+    error_message = "Unexpected virtual network address space"
+  }
+
+  assert {
+    condition     = azurerm_subnet.this["CoreSubnet"].name == "CoreSubnet"
+    error_message = "Unexpected subnet name"
   }
 }
