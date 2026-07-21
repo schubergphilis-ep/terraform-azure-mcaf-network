@@ -1,18 +1,7 @@
-resource "azurerm_resource_group" "this" {
-  name     = var.resource_group_name
-  location = var.location
-  tags = merge(
-    try(var.tags),
-    tomap({
-      "Resource Type" = "Resource Group"
-    })
-  )
-}
-
 resource "azurerm_virtual_network" "this" {
   name                = var.vnet_name
-  location            = azurerm_resource_group.this.location
-  resource_group_name = azurerm_resource_group.this.name
+  location            = var.location
+  resource_group_name = var.resource_group_name
   address_space       = var.vnet_address_space
   dns_servers         = var.vnet_dns_servers
   tags = merge(

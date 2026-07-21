@@ -36,7 +36,6 @@ No modules.
 | [azurerm_private_dns_zone.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone) | resource |
 | [azurerm_private_dns_zone_virtual_network_link.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone_virtual_network_link) | resource |
 | [azurerm_public_ip.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/public_ip) | resource |
-| [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) | resource |
 | [azurerm_subnet.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/subnet) | resource |
 | [azurerm_subnet_nat_gateway_association.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/subnet_nat_gateway_association) | resource |
 | [azurerm_subnet_network_security_group_association.additional](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/subnet_network_security_group_association) | resource |
@@ -73,7 +72,6 @@ No modules.
 | <a name="output_all_subnets"></a> [all\_subnets](#output\_all\_subnets) | A list of all subnets created |
 | <a name="output_name"></a> [name](#output\_name) | The name of the virtual network |
 | <a name="output_private_dns_zone_list"></a> [private\_dns\_zone\_list](#output\_private\_dns\_zone\_list) | A map of private DNS zone names to their corresponding names and IDs |
-| <a name="output_resource_group"></a> [resource\_group](#output\_resource\_group) | The resource group in which the virtual network is created |
 | <a name="output_subnets"></a> [subnets](#output\_subnets) | A map of subnet names to their corresponding names, IDs and address prefixes |
 | <a name="output_subnets_with_default_nsg"></a> [subnets\_with\_default\_nsg](#output\_subnets\_with\_default\_nsg) | n/a |
 | <a name="output_subnets_with_nsg"></a> [subnets\_with\_nsg](#output\_subnets\_with\_nsg) | n/a |

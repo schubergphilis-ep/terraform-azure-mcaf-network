@@ -36,11 +36,6 @@ run "plan" {
   command = plan
 
   assert {
-    condition     = azurerm_resource_group.this.name == "example-rsg"
-    error_message = "Unexpected resource group name"
-  }
-
-  assert {
     condition     = azurerm_virtual_network.this.name == "my-vnet"
     error_message = "Unexpected virtual network name"
   }
