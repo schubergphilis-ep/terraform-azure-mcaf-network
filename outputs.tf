@@ -10,13 +10,7 @@ output "vnet_id" {
 
 output "subnets" {
   description = "A map of subnet names to their corresponding names, IDs and address prefixes"
-  value = {
-    for subnet in azurerm_subnet.this : subnet.name => {
-      name             = subnet.name
-      id               = subnet.id
-      address_prefixes = subnet.address_prefixes
-    }
-  }
+  value       = module.subnet.subnets
 }
 
 output "private_dns_zone_list" {
@@ -31,7 +25,7 @@ output "private_dns_zone_list" {
 
 output "all_subnets" {
   description = "A list of all subnets created"
-  value = [for subnet in azurerm_subnet.this : {
+  value = [for subnet in module.subnet.subnets : {
     name = subnet.name
     id   = subnet.id
   }]

@@ -161,10 +161,36 @@ subnets = {
 
 DESCRIPTION
 
+  # `address_prefix` stays in the type above so existing configurations do not
+  # fail with "unsupported attribute", but it has never had any effect: azurerm
+  # removed the singular argument, and no resource here ever read it. A subnet
+  # configured with only `address_prefix` planned cleanly and then failed at
+  # apply, with Azure rejecting a subnet that has no prefix. Requiring the
+  # plural turns that into a plan-time error that names the attribute to change.
   validation {
-    condition     = alltrue([for _, subnet in var.subnets : subnet.address_prefix != null || subnet.address_prefixes != null])
-    error_message = "One of `address_prefix` or `address_prefixes` must be set."
+    condition     = alltrue([for _, subnet in var.subnets : try(length(subnet.address_prefixes), 0) > 0])
+    error_message = "Each subnet needs at least one entry in `address_prefixes`. The singular `address_prefix` is ignored — azurerm has no such argument — so move its value into `address_prefixes = [...]`."
   }
+}
+
+variable "manage_route_table_associations" {
+  type        = bool
+  default     = false
+  description = <<DESCRIPTION
+Whether to associate each subnet with the route table given in its `route_table`
+attribute.
+
+Defaults to `false`, which reproduces the behaviour of every release up to and
+including v1.0.0: `route_table` was accepted and silently ignored, because no
+resource read it. Turning this on makes the attribute effective.
+
+Leave it off unless you have checked what the change would do. If subnets in
+this network already have route tables attached — associated by hand, or by a
+resource in your own configuration — enabling this makes Terraform manage an
+association that already exists, and a subnet accepts only one route table.
+Enabling it where nothing is attached yet changes how traffic leaves those
+subnets, which is not a no-op even though no subnet is replaced.
+DESCRIPTION
 }
 
 variable "tags" {
