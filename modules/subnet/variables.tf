@@ -33,15 +33,11 @@ variable "subnets" {
   description = <<DESCRIPTION
 This object describes the subnets to create within the virtual network.
 
-This type lists **only** what this module implements. It is deliberately
-narrower than the root module's `subnets` variable: network security groups,
-NAT gateways, service endpoint policies and role assignments are composed
-around the subnet by the root module's own resources, not by this one. Setting
-one of those here is a type error rather than a value this module quietly
-discards, which is the point of keeping the two shapes separate.
+Deliberately narrower than the root module's `subnets` variable — see
+MIGRATION.md for which attributes live where, and why.
 
 - `name`             = (Optional) - The name of the subnet. Defaults to the map key. Changing this forces a new resource to be created.
-- `address_prefixes` = (Required) - The address prefixes for the subnet. There is no singular `address_prefix`: azurerm removed that argument, so accepting it here could only ever discard it. Changing this forces a new resource to be created.
+- `address_prefixes` = (Required) - The address prefixes for the subnet. There is no singular `address_prefix`. Changing this forces a new resource to be created.
 - `default_outbound_access_enabled` = (Optional) - Whether to allow default outbound internet access from the subnet. Defaults to false.
 - `delegate_to` = (Optional) - The service to delegate the subnet to. Changing this forces a new resource to be created.
 - `delegate_to_actions` = (Optional) - The delegation actions. Defaults to the entry for `delegate_to` in `subnet_delegations_actions`.

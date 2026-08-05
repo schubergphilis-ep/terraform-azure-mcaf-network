@@ -176,21 +176,7 @@ DESCRIPTION
 variable "manage_route_table_associations" {
   type        = bool
   default     = false
-  description = <<DESCRIPTION
-Whether to associate each subnet with the route table given in its `route_table`
-attribute.
-
-Defaults to `false`, which reproduces the behaviour of every release up to and
-including v1.0.0: `route_table` was accepted and silently ignored, because no
-resource read it. Turning this on makes the attribute effective.
-
-Leave it off unless you have checked what the change would do. If subnets in
-this network already have route tables attached — associated by hand, or by a
-resource in your own configuration — enabling this makes Terraform manage an
-association that already exists, and a subnet accepts only one route table.
-Enabling it where nothing is attached yet changes how traffic leaves those
-subnets, which is not a no-op even though no subnet is replaced.
-DESCRIPTION
+  description = "Whether to associate each subnet with the route table given in its `route_table` attribute. Defaults to `false`, which reproduces the pre-v1.1.0 behaviour of ignoring the attribute. Read MIGRATION.md before enabling it — it changes how traffic leaves those subnets."
 }
 
 variable "tags" {
