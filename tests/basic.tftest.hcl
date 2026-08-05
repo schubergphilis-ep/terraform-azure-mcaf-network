@@ -52,3 +52,34 @@ run "plan" {
     error_message = "Unexpected subnet name"
   }
 }
+
+# A virtual network with no subnets at all: subnets defaults to {}, so the
+# for_each'd subnet module expands to nothing.
+run "vnet_only_no_subnets" {
+  command = plan
+
+  variables {
+    subnets    = {}
+    natgateway = null
+  }
+
+  assert {
+    condition     = azurerm_virtual_network.this.name == "my-vnet"
+    error_message = "the virtual network should still be created"
+  }
+
+  assert {
+    condition     = length(module.subnet) == 0
+    error_message = "no subnet module instances should be created"
+  }
+
+  assert {
+    condition     = length(output.subnets) == 0
+    error_message = "the subnets output should be empty"
+  }
+
+  assert {
+    condition     = length(output.all_subnets) == 0
+    error_message = "the all_subnets output should be empty"
+  }
+}
