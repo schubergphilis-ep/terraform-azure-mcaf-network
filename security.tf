@@ -38,7 +38,7 @@ resource "azurerm_subnet_network_security_group_association" "this" {
     for key, subnet in local.default_subnets : key => subnet if !subnet.no_nsg_association
   }
 
-  subnet_id                 = module.subnet.subnet_ids[each.key]
+  subnet_id                 = module.subnet[each.key].id
   network_security_group_id = each.value.network_security_group_id != null ? each.value.network_security_group_id : azurerm_network_security_group.this.id
 }
 
@@ -101,7 +101,7 @@ resource "azurerm_subnet_network_security_group_association" "simple" {
     for key, subnet in local.subnets_with_nsg_azure_default : key => subnet
   }
 
-  subnet_id                 = module.subnet.subnet_ids[each.key]
+  subnet_id                 = module.subnet[each.key].id
   network_security_group_id = azurerm_network_security_group.simple[each.key].id
 }
 
@@ -164,7 +164,7 @@ resource "azurerm_subnet_network_security_group_association" "additional" {
     for key, subnet in local.subnets_with_nsg : key => subnet if !subnet.no_nsg_association
   }
 
-  subnet_id                 = module.subnet.subnet_ids[each.key]
+  subnet_id                 = module.subnet[each.key].id
   network_security_group_id = azurerm_network_security_group.additional[each.key].id
 }
 
@@ -227,7 +227,7 @@ resource "azurerm_subnet_network_security_group_association" "azbastion" {
     for key, subnet in local.azure_bastion_subnet : key => subnet if !subnet.no_nsg_association
   }
 
-  subnet_id                 = module.subnet.subnet_ids[each.key]
+  subnet_id                 = module.subnet[each.key].id
   network_security_group_id = azurerm_network_security_group.azbastion[each.key].id
 
   depends_on = [azurerm_network_security_rule.azbastion]

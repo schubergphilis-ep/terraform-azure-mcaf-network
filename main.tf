@@ -12,36 +12,24 @@ resource "azurerm_virtual_network" "this" {
   )
 }
 
-# Subnets live in ./modules/subnet so that callers whose virtual network is
-# provisioned elsewhere can create just the subnets. Resource addresses are
-# unchanged — moved.tf relocates existing state.
+# Subnets live in ./modules/subnet so callers with an external VNet can use them alone.
 module "subnet" {
-  source = "./modules/subnet"
+  source   = "./modules/subnet"
+  for_each = var.subnets
 
-  resource_group_name        = azurerm_virtual_network.this.resource_group_name
-  virtual_network_name       = azurerm_virtual_network.this.name
-  subnet_delegations_actions = var.subnet_delegations_actions
+  name                 = each.value.name != null ? each.value.name : each.key
+  resource_group_name  = azurerm_virtual_network.this.resource_group_name
+  virtual_network_name = azurerm_virtual_network.this.name
+  address_prefixes     = each.value.address_prefixes
 
-  # Projected down to the attributes the submodule implements, rather than
-  # forwarding var.subnets wholesale. Network security groups, NAT gateways,
-  # service endpoint policies and role assignments are composed by this
-  # module's own resources against the subnet IDs it returns, so passing them
-  # down would only let the submodule accept inputs it silently drops.
-  subnets = {
-    for key, subnet in var.subnets : key => {
-      name                                          = subnet.name
-      address_prefixes                              = subnet.address_prefixes
-      default_outbound_access_enabled               = subnet.default_outbound_access_enabled
-      delegate_to                                   = subnet.delegate_to
-      delegate_to_actions                           = subnet.delegate_to_actions
-      private_endpoint_network_policies             = subnet.private_endpoint_network_policies
-      private_link_service_network_policies_enabled = subnet.private_link_service_network_policies_enabled
-      service_endpoints                             = subnet.service_endpoints
+  default_outbound_access_enabled               = each.value.default_outbound_access_enabled
+  delegate_to                                   = each.value.delegate_to
+  delegate_to_actions                           = each.value.delegate_to_actions
+  private_endpoint_network_policies             = each.value.private_endpoint_network_policies
+  private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
+  service_endpoints                             = each.value.service_endpoints
+  subnet_delegations_actions                    = var.subnet_delegations_actions
 
-      # Opt-in, because this module accepted `route_table` and never acted on it
-      # up to v1.0.0. Honouring it unconditionally would attach route tables to
-      # existing live subnets on upgrade — a routing change, not a no-op.
-      route_table = var.manage_route_table_associations ? subnet.route_table : null
-    }
-  }
+  # Opt-in: ignored up to v1.0.0, so enabling it changes live routing.
+  route_table = var.manage_route_table_associations ? each.value.route_table : null
 }

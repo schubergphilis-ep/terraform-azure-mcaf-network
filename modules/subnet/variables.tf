@@ -1,80 +1,74 @@
-################################################################################
-# Inputs.
-#
-# `subnets` and `subnet_delegations_actions` are copied verbatim from the root
-# module so the two cannot drift. Keep them in sync when either changes.
-################################################################################
+variable "name" {
+  type        = string
+  description = "Name of the subnet. Changing this forces a new resource to be created."
+  nullable    = false
+}
 
 variable "resource_group_name" {
   type        = string
   description = "Name of the resource group holding the virtual network. Subnets are created in the same resource group as their virtual network."
+  nullable    = false
 }
 
 variable "virtual_network_name" {
   type        = string
-  description = "Name of the virtual network to create the subnets in. The network may be managed elsewhere — this module never creates or modifies it."
+  description = "Name of the virtual network to create the subnet in. The network may be managed elsewhere; this module never creates or modifies it."
+  nullable    = false
 }
 
-variable "subnets" {
-  type = map(object({
-    name                                          = optional(string)
-    address_prefixes                              = list(string)
-    default_outbound_access_enabled               = optional(bool, false)
-    delegate_to                                   = optional(string, null)
-    delegate_to_actions                           = optional(list(string), null)
-    private_endpoint_network_policies             = optional(string, "Disabled")
-    private_link_service_network_policies_enabled = optional(bool, true)
-    route_table = optional(object({
-      id = string
-    }))
-    service_endpoints = optional(set(string))
-  }))
-  default     = {}
-  description = <<DESCRIPTION
-This object describes the subnets to create within the virtual network.
-
-Deliberately narrower than the root module's `subnets` variable — see
-MIGRATION.md for which attributes live where, and why.
-
-- `name`             = (Optional) - The name of the subnet. Defaults to the map key. Changing this forces a new resource to be created.
-- `address_prefixes` = (Required) - The address prefixes for the subnet. There is no singular `address_prefix`. Changing this forces a new resource to be created.
-- `default_outbound_access_enabled` = (Optional) - Whether to allow default outbound internet access from the subnet. Defaults to false.
-- `delegate_to` = (Optional) - The service to delegate the subnet to. Changing this forces a new resource to be created.
-- `delegate_to_actions` = (Optional) - The delegation actions. Defaults to the entry for `delegate_to` in `subnet_delegations_actions`.
-- `private_endpoint_network_policies` = (Optional) - Enable or Disable network policies for the private endpoint on the subnet. Possible values are Disabled, Enabled, NetworkSecurityGroupEnabled and RouteTableEnabled. Defaults to Disabled.
-- `private_link_service_network_policies_enabled` = (Optional) - Enable or disable network policies for private link service on the subnet. Defaults to true.
-- `route_table` = (Optional) - The Route Table to associate with the subnet. The route table itself is not created here; pass the ID of one owned elsewhere.
-  `id` = (Required) - The resource ID of the Route Table.
-- `service_endpoints` = (Optional) - The service endpoints to enable on the subnet.
-
-  Example Inputs:
-
-```hcl
-subnets = {
-  "CoreSubnet" = {
-    address_prefixes                = ["100.0.1.0/24"]
-    default_outbound_access_enabled = false
-  }
-  "DevopsSubnet" = {
-    address_prefixes                = ["100.0.2.0/24"]
-    default_outbound_access_enabled = false
-    delegate_to                     = "Microsoft.ContainerInstance/containerGroups"
-  }
-  "NodeSubnet" = {
-    address_prefixes = ["100.0.3.0/24"]
-    route_table = {
-      id = "/subscriptions/.../resourceGroups/rg/providers/Microsoft.Network/routeTables/rt-egress"
-    }
-  }
-}
-```
-
-DESCRIPTION
+variable "address_prefixes" {
+  type        = list(string)
+  description = "Address prefixes for the subnet. Changing this forces a new resource to be created."
+  nullable    = false
 
   validation {
-    condition     = alltrue([for _, subnet in var.subnets : length(subnet.address_prefixes) > 0])
-    error_message = "Each subnet needs at least one entry in `address_prefixes`."
+    condition     = length(var.address_prefixes) > 0
+    error_message = "At least one address prefix is required."
   }
+}
+
+variable "default_outbound_access_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether to allow default outbound internet access from the subnet."
+}
+
+variable "delegate_to" {
+  type        = string
+  default     = null
+  description = "Service to delegate the subnet to, for example `Microsoft.ContainerInstance/containerGroups`. Changing this forces a new resource to be created."
+}
+
+variable "delegate_to_actions" {
+  type        = list(string)
+  default     = null
+  description = "Delegation actions. Defaults to the entry for `delegate_to` in `subnet_delegations_actions`."
+}
+
+variable "private_endpoint_network_policies" {
+  type        = string
+  default     = "Disabled"
+  description = "Enable or disable network policies for private endpoints on the subnet. Possible values are `Disabled`, `Enabled`, `NetworkSecurityGroupEnabled` and `RouteTableEnabled`."
+}
+
+variable "private_link_service_network_policies_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether network policies for private link service are enabled on the subnet."
+}
+
+variable "route_table" {
+  type = object({
+    id = string
+  })
+  default     = null
+  description = "Route table to associate with the subnet. The route table itself is not created here; pass the ID of one owned elsewhere."
+}
+
+variable "service_endpoints" {
+  type        = set(string)
+  default     = null
+  description = "Service endpoints to enable on the subnet."
 }
 
 variable "subnet_delegations_actions" {

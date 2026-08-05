@@ -1,20 +1,19 @@
-output "subnets" {
-  description = "Map of subnet name to its name, ID and address prefixes. Shape matches the root module's `subnets` output."
-  value = {
-    for subnet in azurerm_subnet.this : subnet.name => {
-      name             = subnet.name
-      id               = subnet.id
-      address_prefixes = subnet.address_prefixes
-    }
-  }
+output "id" {
+  description = "The ID of the subnet."
+  value       = azurerm_subnet.this.id
 }
 
-output "subnet_ids" {
-  description = "Map of the `subnets` input key to the created subnet ID. Keyed by input key rather than subnet name, so callers can look a subnet up without knowing whether `name` was overridden."
-  value       = { for key, subnet in azurerm_subnet.this : key => subnet.id }
+output "name" {
+  description = "The name of the subnet."
+  value       = azurerm_subnet.this.name
 }
 
-output "route_table_association_ids" {
-  description = "Map of the `subnets` input key to the route table association ID, for subnets that set `route_table`."
-  value       = { for key, association in azurerm_subnet_route_table_association.this : key => association.id }
+output "address_prefixes" {
+  description = "The address prefixes of the subnet."
+  value       = azurerm_subnet.this.address_prefixes
+}
+
+output "route_table_association_id" {
+  description = "The ID of the route table association, or null when `route_table` is unset."
+  value       = try(azurerm_subnet_route_table_association.this[0].id, null)
 }

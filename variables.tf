@@ -161,12 +161,7 @@ subnets = {
 
 DESCRIPTION
 
-  # `address_prefix` stays in the type above so existing configurations do not
-  # fail with "unsupported attribute", but it has never had any effect: azurerm
-  # removed the singular argument, and no resource here ever read it. A subnet
-  # configured with only `address_prefix` planned cleanly and then failed at
-  # apply, with Azure rejecting a subnet that has no prefix. Requiring the
-  # plural turns that into a plan-time error that names the attribute to change.
+  # `address_prefix` is kept in the type for compatibility but has never had any effect.
   validation {
     condition     = alltrue([for _, subnet in var.subnets : try(length(subnet.address_prefixes), 0) > 0])
     error_message = "Each subnet needs at least one entry in `address_prefixes`. The singular `address_prefix` is ignored — azurerm has no such argument — so move its value into `address_prefixes = [...]`."
