@@ -9,7 +9,8 @@ a separate state, in another repository — can create only the subnets:
 
 ```hcl
 module "subnets" {
-  source = "schubergphilis-ep/mcaf-network/azure//modules/subnet"
+  source  = "schubergphilis-ep/mcaf-network/azure//modules/subnet"
+  version = "1.1.0"
 
   resource_group_name  = "rg-platform-network"
   virtual_network_name = "vnet-platform"
