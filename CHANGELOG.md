@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v1.0.0...v1.0.1) (2026-08-06)
+
+
+### 🐛 Fixes
+
+* bound the azurerm constraint below 5.0 ([#6](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/issues/6)) ([a6ec61f](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/commit/a6ec61f41406981f41c29dee5e885ae4f8310481))
+
 ## [1.0.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v0.5.2...v1.0.0) (2026-07-21)
 
 
