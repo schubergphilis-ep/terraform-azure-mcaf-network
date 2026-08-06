@@ -20,7 +20,7 @@ Root module outputs are unchanged, including `subnets`, `all_subnets` and `all_n
 
 ### How to upgrade v2.0.0
 
-1. Upgrade from `v1.0.0`. Earlier versions are untested against this path.
+1. Upgrade from `v1.x`. Earlier versions are untested against this path.
 
 2. Replace any singular `address_prefix` with `address_prefixes`:
 
