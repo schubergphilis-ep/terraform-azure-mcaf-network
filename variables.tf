@@ -171,7 +171,7 @@ DESCRIPTION
 variable "manage_route_table_associations" {
   type        = bool
   default     = false
-  description = "Whether to associate each subnet with the route table given in its `route_table` attribute. Defaults to `false`, which reproduces the pre-v1.1.0 behaviour of ignoring the attribute. Read MIGRATION.md before enabling it — it changes how traffic leaves those subnets."
+  description = "Whether to associate each subnet with the route table given in its `route_table` attribute. Defaults to `false`, which reproduces the pre-v2.0.0 behaviour of ignoring the attribute. Read UPGRADING.md before enabling it — it changes how traffic leaves those subnets."
 }
 
 variable "tags" {
