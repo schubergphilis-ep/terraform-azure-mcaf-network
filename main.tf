@@ -29,7 +29,4 @@ module "subnet" {
   private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
   service_endpoints                             = each.value.service_endpoints
   subnet_delegations_actions                    = var.subnet_delegations_actions
-
-  # Opt-in: ignored up to v1.0.0, so enabling it changes live routing.
-  route_table = var.manage_route_table_associations ? each.value.route_table : null
 }

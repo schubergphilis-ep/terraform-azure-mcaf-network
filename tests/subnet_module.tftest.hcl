@@ -52,39 +52,8 @@ run "creates_one_subnet_with_defaults" {
   }
 
   assert {
-    condition     = length(azurerm_subnet_route_table_association.this) == 0
-    error_message = "no association should be created when route_table is unset"
-  }
-
-  assert {
     condition     = length(azurerm_subnet.this.delegation) == 0
     error_message = "no delegation block should be emitted when delegate_to is unset"
-  }
-}
-
-run "route_table_creates_an_association" {
-  command = plan
-
-  module {
-    source = "./modules/subnet"
-  }
-
-  variables {
-    name             = "RoutedSubnet"
-    address_prefixes = ["100.0.2.0/24"]
-    route_table = {
-      id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-network/providers/Microsoft.Network/routeTables/rt-egress"
-    }
-  }
-
-  assert {
-    condition     = length(azurerm_subnet_route_table_association.this) == 1
-    error_message = "an association should be created when route_table is set"
-  }
-
-  assert {
-    condition     = azurerm_subnet_route_table_association.this[0].route_table_id == "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-network/providers/Microsoft.Network/routeTables/rt-egress"
-    error_message = "the association should point at the route table passed in"
   }
 }
 

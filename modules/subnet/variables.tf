@@ -57,14 +57,6 @@ variable "private_link_service_network_policies_enabled" {
   description = "Whether network policies for private link service are enabled on the subnet."
 }
 
-variable "route_table" {
-  type = object({
-    id = string
-  })
-  default     = null
-  description = "Route table to associate with the subnet. The route table itself is not created here; pass the ID of one owned elsewhere."
-}
-
 variable "service_endpoints" {
   type        = set(string)
   default     = null

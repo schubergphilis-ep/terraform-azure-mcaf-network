@@ -21,9 +21,3 @@ resource "azurerm_subnet" "this" {
   }
 }
 
-resource "azurerm_subnet_route_table_association" "this" {
-  count = var.route_table != null ? 1 : 0
-
-  subnet_id      = azurerm_subnet.this.id
-  route_table_id = var.route_table.id
-}

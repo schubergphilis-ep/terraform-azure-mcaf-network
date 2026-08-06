@@ -13,7 +13,3 @@ output "address_prefixes" {
   value       = azurerm_subnet.this.address_prefixes
 }
 
-output "route_table_association_id" {
-  description = "The ID of the route table association, or null when `route_table` is unset."
-  value       = try(azurerm_subnet_route_table_association.this[0].id, null)
-}
