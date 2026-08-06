@@ -45,8 +45,7 @@ run "plan" {
     error_message = "Unexpected virtual network address space"
   }
 
-  # Subnets moved into ./modules/subnet. Test assertions cannot address child
-  # module resources, so this goes through the output instead.
+  # Test assertions cannot address child module resources, so this goes through the output instead.
   assert {
     condition     = output.subnets["CoreSubnet"].name == "CoreSubnet"
     error_message = "Unexpected subnet name"
