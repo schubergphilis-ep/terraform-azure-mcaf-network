@@ -117,6 +117,7 @@ variable "subnet_delegations_actions" {
     "Microsoft.Netapp/volumes" = [
       "Microsoft.Network/networkinterfaces/*", "Microsoft.Network/virtualNetworks/subnets/join/action"
     ]
+    "Microsoft.Network/applicationGateways"          = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
     "Microsoft.Network/dnsResolvers"                 = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
     "Microsoft.Network/fpgaNetworkInterfaces"        = ["Microsoft.Network/virtualNetworks/subnets/action"]
     "Microsoft.Network/managedResolvers"             = ["Microsoft.Network/virtualNetworks/subnets/action"]
