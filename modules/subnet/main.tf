@@ -92,6 +92,10 @@ resource "azurerm_subnet_network_security_group_association" "this" {
 
   subnet_id                 = azurerm_subnet.this.id
   network_security_group_id = local.nsg_id
+
+  # Rules before the attach, or the group is briefly associated carrying only Azure's defaults —
+  # which drops whatever the rules were meant to permit while an apply is still running.
+  depends_on = [azurerm_network_security_rule.this]
 }
 
 resource "azurerm_subnet_route_table_association" "this" {

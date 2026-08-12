@@ -21,7 +21,7 @@ The submodule also performs the network security group association, so three of 
 | `azurerm_subnet_network_security_group_association.simple["<key>"]` | same |
 | `azurerm_subnet_network_security_group_association.additional["<key>"]` | same |
 
-`AzureBastionSubnet` is the exception and does not move: Bastion rejects a group that lacks its required rules, and that ordering cannot be expressed from inside the submodule's `for_each`.
+`AzureBastionSubnet` is the exception and does not move. Its group has to carry the [required Bastion rules](https://learn.microsoft.com/en-us/azure/bastion/bastion-nsg) by the time it is attached — omitting them costs the host its platform updates and its connectivity to target VMs — and that ordering cannot be expressed per instance from inside the submodule's `for_each`.
 
 Which group a subnet is associated with does not change, `no_nsg_association` included — down to `create_network_security_group` with `network_security_group_config.azure_default` continuing to associate even when `no_nsg_association` is set, which is how it behaved before.
 
