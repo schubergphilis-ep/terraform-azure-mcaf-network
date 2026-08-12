@@ -27,6 +27,8 @@ Which group a subnet is associated with does not change, `no_nsg_association` in
 
 > [!WARNING]
 > `route_table` on a subnet now takes effect. It was accepted and silently ignored in `v1.x`, because no resource read it. If you have been passing it, the first apply after upgrading creates the association — and replaces whatever route table is attached to that subnet today. Check `route_table` against live state before applying, or drop the attribute.
+>
+> On `AzureBastionSubnet` this is fatal rather than disruptive: Azure refuses the attachment with `RouteTableCannotBeAttachedForAzureBastionSubnet`. A `route_table` that was inert on `v1.x` therefore becomes an error, so it must be removed from that subnet before upgrading. The module now fails this at plan time instead of part-way through an apply.
 
 Root module outputs are unchanged, including `subnets`, `all_subnets` and `all_network_security_groups`.
 
@@ -43,7 +45,9 @@ Root module outputs are unchanged, including `subnets`, `all_subnets` and `all_n
    "CoreSubnet" = { address_prefixes = ["100.0.1.0/24"] }
    ```
 
-3. Add one `moved` block per subnet key, adjusting `module.network` to the name you call this module by:
+3. Bump the module source to `v2.0.0` and add every block below **in the same change**. A `moved` block is only valid once its source address has stopped existing in the configuration, so adding the blocks while still on `v1.x` fails with `Moved object still exists` for each one.
+
+4. Add one `moved` block per subnet key, adjusting `module.network` to the name you call this module by:
 
    ```hcl
    moved {
@@ -52,7 +56,7 @@ Root module outputs are unchanged, including `subnets`, `all_subnets` and `all_n
    }
    ```
 
-4. Add a second block per subnet key that had a group associated, using whichever of `this`, `simple` or `additional` applied to it. `terraform state list | grep subnet_network_security_group_association` prints exactly which, so the names do not have to be worked out from the configuration:
+5. Add a second block per subnet key that had a group associated, using whichever of `this`, `simple` or `additional` applied to it. `terraform state list | grep subnet_network_security_group_association` prints exactly which, so the names do not have to be worked out from the configuration:
 
    ```hcl
    moved {
@@ -63,6 +67,6 @@ Root module outputs are unchanged, including `subnets`, `all_subnets` and `all_n
 
    Skip `AzureBastionSubnet` — its association stays in the root module.
 
-5. Run `terraform plan` and confirm it reports `0 to add, 0 to change, 0 to destroy`. Anything else means a block is missing or a key is wrong — do not apply until the plan is clean.
+6. Run `terraform plan` and confirm it reports `0 to add, 0 to change, 0 to destroy`. Anything else means a block is missing or a key is wrong — do not apply until the plan is clean.
 
-6. Apply, then drop the `moved` blocks once every consumer has upgraded.
+7. Apply, then drop the `moved` blocks once every consumer has upgraded.

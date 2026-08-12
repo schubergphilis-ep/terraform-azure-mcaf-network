@@ -99,5 +99,14 @@ resource "azurerm_subnet_route_table_association" "this" {
 
   subnet_id      = azurerm_subnet.this.id
   route_table_id = var.route_table_id
+
+  # Caught at plan time because Azure answers 400 for this at apply, after any sibling association
+  # has already been created.
+  lifecycle {
+    precondition {
+      condition     = var.name != "AzureBastionSubnet"
+      error_message = "Azure rejects a route table on AzureBastionSubnet with RouteTableCannotBeAttachedForAzureBastionSubnet. Remove route_table_id for this subnet."
+    }
+  }
 }
 

@@ -247,6 +247,24 @@ run "a_route_table_id_is_associated" {
   }
 }
 
+run "reject_a_route_table_on_the_bastion_subnet" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "AzureBastionSubnet"
+    address_prefixes = ["100.0.5.0/24"]
+    route_table_id   = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
+  }
+
+  expect_failures = [
+    azurerm_subnet_route_table_association.this,
+  ]
+}
+
 run "reject_empty_address_prefixes" {
   command = plan
 
