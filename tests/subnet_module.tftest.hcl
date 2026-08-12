@@ -125,6 +125,128 @@ run "service_endpoints_are_passed_through" {
   }
 }
 
+run "an_nsg_id_is_associated_and_nothing_is_created" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    network_security_group = {
+      id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_network_security_group.this) == 0
+    error_message = "an id means the group is owned elsewhere, so none should be created"
+  }
+
+  assert {
+    condition     = length(azurerm_network_security_rule.this) == 0
+    error_message = "no rules should be created against a group owned elsewhere"
+  }
+
+  assert {
+    condition     = length(azurerm_subnet_network_security_group_association.this) == 1
+    error_message = "the passed group should still be associated with the subnet"
+  }
+}
+
+run "a_named_nsg_is_created_with_its_rules" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    location         = "westeurope"
+    network_security_group = {
+      name = "node-subnet-nsg"
+      rules = {
+        allow-gateway-in = {
+          priority                   = 100
+          direction                  = "Inbound"
+          access                     = "Allow"
+          protocol                   = "Tcp"
+          source_address_prefix      = "10.233.4.224/27"
+          source_port_range          = "*"
+          destination_address_prefix = "*"
+          destination_port_range     = "443"
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = azurerm_network_security_group.this[0].name == "node-subnet-nsg"
+    error_message = "the group should be created under the name given"
+  }
+
+  assert {
+    condition     = azurerm_network_security_group.this[0].resource_group_name == "rg-platform-network"
+    error_message = "the group should default to the subnet's resource group"
+  }
+
+  assert {
+    condition     = azurerm_network_security_rule.this["allow-gateway-in"].priority == 100
+    error_message = "the rule key should become a rule on the created group"
+  }
+
+  assert {
+    condition     = length(azurerm_subnet_network_security_group_association.this) == 1
+    error_message = "a created group should be associated with the subnet"
+  }
+}
+
+run "reject_rules_alongside_an_nsg_id" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    network_security_group = {
+      id = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/networkSecurityGroups/existing"
+      rules = {
+        allow-in = { priority = 100, direction = "Inbound", access = "Allow", protocol = "Tcp" }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.network_security_group,
+  ]
+}
+
+run "a_route_table_id_is_associated" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    route_table_id   = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
+  }
+
+  assert {
+    condition     = length(azurerm_subnet_route_table_association.this) == 1
+    error_message = "a route table id should produce an association"
+  }
+}
+
 run "reject_empty_address_prefixes" {
   command = plan
 

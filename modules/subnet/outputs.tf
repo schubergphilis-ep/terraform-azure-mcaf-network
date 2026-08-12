@@ -13,3 +13,8 @@ output "address_prefixes" {
   value       = azurerm_subnet.this.address_prefixes
 }
 
+output "network_security_group_id" {
+  description = "The ID of the associated network security group, whether this module created it or the caller passed it in."
+  value       = local.nsg_id
+}
+

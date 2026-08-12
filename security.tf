@@ -33,15 +33,6 @@ resource "azurerm_network_security_rule" "default" {
   network_security_group_name                = azurerm_network_security_group.this.name
 }
 
-resource "azurerm_subnet_network_security_group_association" "this" {
-  for_each = {
-    for key, subnet in local.default_subnets : key => subnet if !subnet.no_nsg_association
-  }
-
-  subnet_id                 = module.subnet[each.key].id
-  network_security_group_id = each.value.network_security_group_id != null ? each.value.network_security_group_id : azurerm_network_security_group.this.id
-}
-
 ## Simple NSG, Default Azure
 resource "azurerm_network_security_group" "simple" {
   for_each = local.subnets_with_nsg_azure_default
@@ -94,15 +85,6 @@ resource "azurerm_network_security_rule" "simple" {
 
   # Do not remove this `depends_on` block. It is required to ensure the NSG is created before the rule.
   depends_on = [azurerm_network_security_group.simple]
-}
-
-resource "azurerm_subnet_network_security_group_association" "simple" {
-  for_each = {
-    for key, subnet in local.subnets_with_nsg_azure_default : key => subnet
-  }
-
-  subnet_id                 = module.subnet[each.key].id
-  network_security_group_id = azurerm_network_security_group.simple[each.key].id
 }
 
 ### Additional NSGs and rules
@@ -159,15 +141,6 @@ resource "azurerm_network_security_rule" "additional" {
   depends_on = [azurerm_network_security_group.additional]
 }
 
-resource "azurerm_subnet_network_security_group_association" "additional" {
-  for_each = {
-    for key, subnet in local.subnets_with_nsg : key => subnet if !subnet.no_nsg_association
-  }
-
-  subnet_id                 = module.subnet[each.key].id
-  network_security_group_id = azurerm_network_security_group.additional[each.key].id
-}
-
 ## Azure Bastion NSG and rules
 resource "azurerm_network_security_group" "azbastion" {
   for_each = local.azure_bastion_subnet
@@ -222,6 +195,8 @@ resource "azurerm_network_security_rule" "azbastion" {
   depends_on = [azurerm_network_security_group.azbastion]
 }
 
+# The only association left in the root: Bastion rejects a group that lacks its required rules, and
+# depends_on cannot be expressed per instance from inside the subnet module's for_each.
 resource "azurerm_subnet_network_security_group_association" "azbastion" {
   for_each = {
     for key, subnet in local.azure_bastion_subnet : key => subnet if !subnet.no_nsg_association

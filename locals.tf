@@ -28,6 +28,19 @@ locals {
     )
   }
 
+  # Group each subnet is associated with, now that the submodule performs the association. Mirrors
+  # what security.tf attached directly; AzureBastionSubnet stays there, for its rule ordering.
+  subnet_network_security_group = {
+    for key, subnet in var.subnets : key => (
+      # Checked before no_nsg_association because the azure_default association never honoured it.
+      contains(keys(local.subnets_with_nsg_azure_default), key) ? { id = azurerm_network_security_group.simple[key].id } :
+      subnet.no_nsg_association ? null :
+      contains(keys(local.subnets_with_nsg), key) ? { id = azurerm_network_security_group.additional[key].id } :
+      contains(keys(local.default_subnets), key) ? { id = coalesce(subnet.network_security_group_id, azurerm_network_security_group.this.id) } :
+      null
+    ) if key != "AzureBastionSubnet"
+  }
+
   ## Security rules
   preprocessed_security_rules = { for key, rule in var.security_rules : rule.name => rule }
   security_rules              = merge(var.default_rules, local.preprocessed_security_rules)

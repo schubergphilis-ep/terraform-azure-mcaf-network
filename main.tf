@@ -22,6 +22,10 @@ module "subnet" {
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = each.value.address_prefixes
 
+  # id only: the root owns its groups and their rules, so the submodule associates and nothing more.
+  network_security_group = lookup(local.subnet_network_security_group, each.key, null)
+  route_table_id         = each.value.route_table == null ? null : each.value.route_table.id
+
   default_outbound_access_enabled               = each.value.default_outbound_access_enabled
   delegate_to                                   = each.value.delegate_to
   delegate_to_actions                           = each.value.delegate_to_actions

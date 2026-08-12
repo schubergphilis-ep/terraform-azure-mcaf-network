@@ -27,6 +27,83 @@ variable "address_prefixes" {
   }
 }
 
+variable "location" {
+  type        = string
+  default     = null
+  description = "Azure region. Only required when this module creates a network security group; subnets themselves have no location."
+}
+
+variable "tags" {
+  type        = map(string)
+  default     = null
+  description = "Tags for the network security group, when this module creates one."
+}
+
+variable "network_security_group" {
+  type = object({
+    id                  = optional(string)
+    name                = optional(string)
+    resource_group_name = optional(string)
+    rules = optional(map(object({
+      priority                                   = number
+      direction                                  = string
+      access                                     = string
+      protocol                                   = string
+      description                                = optional(string)
+      source_port_range                          = optional(string)
+      source_port_ranges                         = optional(set(string))
+      destination_port_range                     = optional(string)
+      destination_port_ranges                    = optional(set(string))
+      source_address_prefix                      = optional(string)
+      source_address_prefixes                    = optional(set(string))
+      destination_address_prefix                 = optional(string)
+      destination_address_prefixes               = optional(set(string))
+      source_application_security_group_ids      = optional(set(string))
+      destination_application_security_group_ids = optional(set(string))
+    })), {})
+  })
+  default     = null
+  description = <<-EOT
+    Network security group for the subnet, associated either way. Give `id` to associate a group
+    owned elsewhere, and nothing else is done to it. Give `name` instead to have this module create
+    the group and its `rules`, in `resource_group_name` or alongside the virtual network. Rule keys
+    become rule names.
+  EOT
+
+  validation {
+    condition = (
+      var.network_security_group == null
+      || var.network_security_group.id != null
+      || var.network_security_group.name != null
+    )
+    error_message = "network_security_group needs either id, to associate an existing group, or name, to create one."
+  }
+
+  validation {
+    condition = (
+      var.network_security_group == null
+      || var.network_security_group.id == null
+      || var.network_security_group.name == null
+    )
+    error_message = "network_security_group takes id or name, not both: an id associates a group owned elsewhere, a name creates one here."
+  }
+
+  validation {
+    condition = (
+      var.network_security_group == null
+      || var.network_security_group.id == null
+      || length(var.network_security_group.rules) == 0
+    )
+    error_message = "network_security_group.rules cannot be given alongside id: rules are only created on a group this module owns. Declare them where the group is created."
+  }
+}
+
+variable "route_table_id" {
+  type        = string
+  default     = null
+  description = "Route table to associate with the subnet. Never created here — a table is normally shared by several subnets, so it belongs to the caller."
+}
+
 variable "default_outbound_access_enabled" {
   type        = bool
   default     = false
