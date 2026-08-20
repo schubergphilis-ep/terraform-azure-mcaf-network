@@ -18,3 +18,8 @@ output "network_security_group_id" {
   value       = local.nsg_id
 }
 
+
+output "network_security_group_name" {
+  description = "Name of the group this module created, or null when it associated one it does not own."
+  value       = local.nsg_create ? azurerm_network_security_group.this[0].name : null
+}

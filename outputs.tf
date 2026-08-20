@@ -39,11 +39,13 @@ output "all_subnets" {
 
 output "all_network_security_groups" {
   description = "A map of all network security groups created keyed by subnet"
-  value = { for subnet, nsg in local.all_custom_network_security_groups : subnet => {
-    name     = nsg.name
-    id       = nsg.id
-    location = nsg.location
-  } }
+  value = {
+    for key, subnet in module.subnet : key => {
+      name     = subnet.network_security_group_name
+      id       = subnet.network_security_group_id
+      location = var.location
+    } if subnet.network_security_group_name != null
+  }
 }
 
 output "subnets_with_nsg" {

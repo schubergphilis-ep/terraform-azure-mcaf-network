@@ -60,6 +60,12 @@ variable "network_security_group" {
       destination_address_prefixes               = optional(set(string))
       source_application_security_group_ids      = optional(set(string))
       destination_application_security_group_ids = optional(set(string))
+      timeouts = optional(object({
+        create = optional(string)
+        delete = optional(string)
+        read   = optional(string)
+        update = optional(string)
+      }))
     })), {})
   })
   default     = null

@@ -22,7 +22,10 @@ module "subnet" {
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = each.value.address_prefixes
 
-  # id only: the root owns its groups and their rules, so the submodule associates and nothing more.
+  # The submodule needs this to create a group of its own.
+  location = var.location
+
+  # Name plus rules to create a group, or an id to associate the vnet-wide one.
   network_security_group = lookup(local.subnet_network_security_group, each.key, null)
   route_table_id         = each.value.route_table == null ? null : each.value.route_table.id
 

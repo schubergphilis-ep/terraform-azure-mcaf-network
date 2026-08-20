@@ -85,6 +85,17 @@ resource "azurerm_network_security_rule" "this" {
 
   source_application_security_group_ids      = each.value.source_application_security_group_ids
   destination_application_security_group_ids = each.value.destination_application_security_group_ids
+
+  dynamic "timeouts" {
+    for_each = each.value.timeouts == null ? [] : [each.value.timeouts]
+
+    content {
+      create = timeouts.value.create
+      delete = timeouts.value.delete
+      read   = timeouts.value.read
+      update = timeouts.value.update
+    }
+  }
 }
 
 resource "azurerm_subnet_network_security_group_association" "this" {

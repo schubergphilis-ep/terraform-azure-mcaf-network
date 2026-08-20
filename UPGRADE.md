@@ -65,8 +65,28 @@ Root module outputs are unchanged, including `subnets`, `all_subnets` and `all_n
    }
    ```
 
-   Skip `AzureBastionSubnet` — its association stays in the root module.
+   `AzureBastionSubnet` is included: its association moved down with the rest.
 
-6. Run `terraform plan` and confirm it reports `0 to add, 0 to change, 0 to destroy`. Anything else means a block is missing or a key is wrong — do not apply until the plan is clean.
+6. Add a block per subnet that owned a group, using whichever of `simple`, `additional` or `azbastion` applied to it. The group is `count`-based in the submodule, so the target carries `[0]`:
 
-7. Apply, then drop the `moved` blocks once every consumer has upgraded.
+   ```hcl
+   moved {
+     from = module.network.azurerm_network_security_group.additional["CoreSubnet"]
+     to   = module.network.module.subnet["CoreSubnet"].azurerm_network_security_group.this[0]
+   }
+   ```
+
+   `azurerm_network_security_group.this` is not in this list. The group shared by every subnet that does not ask for its own stays in the root module.
+
+7. Add a block per rule on those groups. **The key changes**: the root keyed rules `<subnet>_<priority>_<access>_<direction>`, the submodule keys them by rule name, so the target is not a copy of the source:
+
+   ```hcl
+   moved {
+     from = module.network.azurerm_network_security_rule.additional["coresubnet_200_allow_inbound"]
+     to   = module.network.module.subnet["CoreSubnet"].azurerm_network_security_rule.this["Allow-Https-Inbound"]
+   }
+   ```
+
+8. Run `terraform plan` and confirm it reports `0 to add, 0 to change, 0 to destroy`. Anything else means a block is missing or a key is wrong — do not apply until the plan is clean.
+
+9. Apply, then drop the `moved` blocks once every consumer has upgraded.
