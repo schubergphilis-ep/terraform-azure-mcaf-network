@@ -1,6 +1,11 @@
 # terraform-azure-mcaf-network
 Terraform module to generate virtual network, subnet, dns_zones.
 
+> **Upgrading from v1.x?** Subnets and their network security groups moved into `./modules/subnet`,
+> which changes the state address of every subnet and every group attached to one. Read
+> [UPGRADE.md](UPGRADE.md) first: without the `moved` blocks it lists, Terraform destroys and recreates
+> them rather than reporting an error.
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
