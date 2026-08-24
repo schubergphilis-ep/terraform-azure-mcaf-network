@@ -29,13 +29,16 @@ locals {
   }
 
   ## Security rules
-  preprocessed_security_rules = { for key, rule in var.security_rules : rule.name => rule }
-  security_rules              = merge(var.default_rules, local.preprocessed_security_rules)
-  azure_bastion_rules_map     = merge(var.azure_bastion_security_rules, local.security_rules)
+  preprocessed_security_rules = { for key, rule in var.vnet_security_rules : rule.name => rule }
+  vnet_security_rules         = merge(var.default_rules, local.preprocessed_security_rules)
+  azure_bastion_rules_map     = merge(var.azure_bastion_security_rules, local.vnet_security_rules)
 
   nsg_with_rules = flatten([
     for subnet_key, subnet in local.subnets_with_nsg : [
-      for rule_key, rule in local.security_rules : {
+      for rule_key, rule in merge(
+        local.vnet_security_rules,
+        lookup(var.subnet_security_rules, subnet_key, {})
+      ) : {
         subnet_key                                 = subnet_key
         name                                       = rule_key
         description                                = rule.description
@@ -60,7 +63,10 @@ locals {
 
   nsg_with_default_security_rules = flatten([
     for subnet_key, subnet in local.subnets_with_nsg_azure_default : [
-      for rule_key, rule in local.preprocessed_security_rules : {
+      for rule_key, rule in merge(
+        local.preprocessed_security_rules,
+        lookup(var.subnet_security_rules, subnet_key, {})
+      ) : {
         subnet_key                                 = subnet_key
         name                                       = rule_key
         description                                = rule.description

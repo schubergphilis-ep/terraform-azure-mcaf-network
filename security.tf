@@ -12,7 +12,7 @@ resource "azurerm_network_security_group" "this" {
 }
 
 resource "azurerm_network_security_rule" "default" {
-  for_each = local.security_rules
+  for_each = local.vnet_security_rules
 
   name                                       = each.value.name
   priority                                   = each.value.priority
