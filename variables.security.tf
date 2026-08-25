@@ -1,4 +1,4 @@
-variable "vnet_security_rules" {
+variable "security_rules" {
   type = map(object({
     name                                       = string
     access                                     = string
@@ -55,7 +55,7 @@ variable "vnet_security_rules" {
   - `update` - (Defaults to 30 minutes) Used when updating the Network Security Rule.
 
 ```hcl
-vnet_security_rules = {
+security_rules = {
   "test" = {
     access                     = "Allow"
     name                       = "Allow-HTTPS-Internet"
@@ -72,53 +72,6 @@ vnet_security_rules = {
 ```hcl
 
   DESCRIPTION
-}
-
-variable "subnet_security_rules" {
-  type = map(map(object({
-    access                                     = string
-    direction                                  = string
-    priority                                   = number
-    protocol                                   = string
-    description                                = optional(string)
-    destination_address_prefix                 = optional(string, null)
-    destination_address_prefixes               = optional(set(string), null)
-    destination_application_security_group_ids = optional(set(string), null)
-    destination_port_range                     = optional(string, null)
-    destination_port_ranges                    = optional(set(string), null)
-    source_address_prefix                      = optional(string, null)
-    source_address_prefixes                    = optional(set(string), null)
-    source_application_security_group_ids      = optional(set(string), null)
-    source_port_range                          = optional(string, null)
-    source_port_ranges                         = optional(set(string), null)
-    timeouts = optional(object({
-      create = optional(string, "30")
-      delete = optional(string, "30")
-      read   = optional(string, "5")
-      update = optional(string, "30")
-    }))
-  })))
-  default     = {}
-  nullable    = false
-  description = <<-EOT
-    Security rules created only in the network security group of the subnet they are keyed under.
-    The outer key is the subnet, the inner key becomes the rule name. Merged over `default_rules`
-    and `vnet_security_rules`, so a rule reusing one of their names overrides it for that subnet.
-    Priorities only have to be unique within a subnet.
-  EOT
-
-  validation {
-    condition     = alltrue([for k, v in var.subnet_security_rules : contains(keys(var.subnets), k)])
-    error_message = "Every key of subnet_security_rules must be a subnet defined in var.subnets."
-  }
-
-  validation {
-    condition = alltrue([
-      for k, rules in var.subnet_security_rules :
-      try(var.subnets[k].create_network_security_group, false)
-    ])
-    error_message = "subnet_security_rules can only be set for subnets with create_network_security_group = true. Subnets without their own group share one, where a subnet rule would apply to every other subnet sharing it."
-  }
 }
 
 variable "default_rules" {

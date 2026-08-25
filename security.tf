@@ -1,18 +1,5 @@
-resource "azurerm_network_security_group" "this" {
-  name                = "${var.vnet_name}-nsg"
-  location            = azurerm_virtual_network.this.location
-  resource_group_name = azurerm_virtual_network.this.resource_group_name
-
-  tags = merge(
-    try(var.tags),
-    tomap({
-      "Resource Type" = "Network Security Group"
-    })
-  )
-}
-
 resource "azurerm_network_security_rule" "default" {
-  for_each = local.vnet_security_rules
+  for_each = local.security_rules
 
   name                                       = each.value.name
   priority                                   = each.value.priority
@@ -59,9 +46,7 @@ resource "azurerm_network_security_group" "simple" {
 }
 
 resource "azurerm_network_security_rule" "simple" {
-  for_each = {
-    for item, rule in local.nsg_with_default_security_rules : lower("${rule.subnet_key}_${rule.priority}_${rule.access}_${rule.direction}") => rule
-  }
+  for_each = local.nsg_with_default_security_rules
 
   access                                     = each.value.access
   direction                                  = each.value.direction
@@ -122,9 +107,7 @@ resource "azurerm_network_security_group" "additional" {
 }
 
 resource "azurerm_network_security_rule" "additional" {
-  for_each = {
-    for item, rule in local.nsg_with_rules : lower("${rule.subnet_key}_${rule.priority}_${rule.access}_${rule.direction}") => rule
-  }
+  for_each = local.nsg_with_rules
 
   access                                     = each.value.access
   direction                                  = each.value.direction

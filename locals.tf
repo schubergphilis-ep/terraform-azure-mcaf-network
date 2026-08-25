@@ -10,35 +10,33 @@ locals {
   }
   azure_bastion_subnet = { for k, v in var.subnets : k => v if k == "AzureBastionSubnet" }
 
-  subnets_with_nsg = {
+  # Subnets that get their own NSG. The AzureBastionSubnet is handled separately.
+  own_nsg_subnets = {
     for k, v in var.subnets :
-    k => v if(
-      v.create_network_security_group &&
-      v.network_security_group_config == null &&
-      k != "AzureBastionSubnet"
-    )
+    k => v if v.create_network_security_group && k != "AzureBastionSubnet"
+  }
+
+  subnets_with_nsg = {
+    for k, v in local.own_nsg_subnets :
+    k => v if !try(v.network_security_group_config.azure_default, false)
   }
 
   subnets_with_nsg_azure_default = {
-    for k, v in var.subnets :
-    k => v if(
-      v.create_network_security_group &&
-      try(v.network_security_group_config.azure_default, false) &&
-      k != "AzureBastionSubnet"
-    )
+    for k, v in local.own_nsg_subnets :
+    k => v if try(v.network_security_group_config.azure_default, false)
   }
 
   ## Security rules
-  preprocessed_security_rules = { for key, rule in var.vnet_security_rules : rule.name => rule }
-  vnet_security_rules         = merge(var.default_rules, local.preprocessed_security_rules)
-  azure_bastion_rules_map     = merge(var.azure_bastion_security_rules, local.vnet_security_rules)
+  preprocessed_security_rules = { for key, rule in var.security_rules : rule.name => rule }
+  security_rules              = merge(var.default_rules, local.preprocessed_security_rules)
+  azure_bastion_rules_map     = merge(var.azure_bastion_security_rules, local.security_rules)
 
-  nsg_with_rules = flatten([
-    for subnet_key, subnet in local.subnets_with_nsg : [
+  subnet_nsg_rules = {
+    for subnet_key, subnet in local.own_nsg_subnets : subnet_key => {
       for rule_key, rule in merge(
-        local.vnet_security_rules,
-        lookup(var.subnet_security_rules, subnet_key, {})
-      ) : {
+        try(subnet.network_security_group_config.azure_default, false) ? local.preprocessed_security_rules : local.security_rules,
+        try(subnet.network_security_group_config.security_rules, {})
+        ) : rule_key => {
         subnet_key                                 = subnet_key
         name                                       = rule_key
         description                                = rule.description
@@ -58,36 +56,22 @@ locals {
         destination_application_security_group_ids = rule.destination_application_security_group_ids
         timeouts                                   = rule.timeouts
       }
-    ]
-  ])
+    }
+  }
 
-  nsg_with_default_security_rules = flatten([
-    for subnet_key, subnet in local.subnets_with_nsg_azure_default : [
-      for rule_key, rule in merge(
-        local.preprocessed_security_rules,
-        lookup(var.subnet_security_rules, subnet_key, {})
-      ) : {
-        subnet_key                                 = subnet_key
-        name                                       = rule_key
-        description                                = rule.description
-        priority                                   = rule.priority
-        direction                                  = rule.direction
-        access                                     = rule.access
-        protocol                                   = rule.protocol
-        source_port_range                          = rule.source_port_range
-        source_port_ranges                         = rule.source_port_ranges
-        destination_port_range                     = rule.destination_port_range
-        destination_port_ranges                    = rule.destination_port_ranges
-        source_address_prefix                      = rule.source_address_prefix
-        source_address_prefixes                    = rule.source_address_prefixes
-        source_application_security_group_ids      = rule.source_application_security_group_ids
-        destination_address_prefix                 = rule.destination_address_prefix
-        destination_address_prefixes               = rule.destination_address_prefixes
-        destination_application_security_group_ids = rule.destination_application_security_group_ids
-        timeouts                                   = rule.timeouts
-      }
-    ]
-  ])
+  nsg_with_rules = merge([
+    for subnet_key, rules in local.subnet_nsg_rules : {
+      for rule_key, rule in rules :
+      lower("${subnet_key}_${rule.priority}_${rule.access}_${rule.direction}") => rule
+    } if contains(keys(local.subnets_with_nsg), subnet_key)
+  ]...)
+
+  nsg_with_default_security_rules = merge([
+    for subnet_key, rules in local.subnet_nsg_rules : {
+      for rule_key, rule in rules :
+      lower("${subnet_key}_${rule.priority}_${rule.access}_${rule.direction}") => rule
+    } if contains(keys(local.subnets_with_nsg_azure_default), subnet_key)
+  ]...)
 
   azure_bastion_security_rules = {
     for rule_key, rule in local.azure_bastion_rules_map : rule_key => rule_key == "Allow-Https-in-from-Internet" ? merge(rule, {

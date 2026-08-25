@@ -70,6 +70,29 @@ variable "subnets" {
     create_network_security_group = optional(bool, false)
     network_security_group_config = optional(object({
       azure_default = optional(bool, false)
+      security_rules = optional(map(object({
+        access                                     = string
+        direction                                  = string
+        priority                                   = number
+        protocol                                   = string
+        description                                = optional(string)
+        destination_address_prefix                 = optional(string)
+        destination_address_prefixes               = optional(set(string))
+        destination_application_security_group_ids = optional(set(string))
+        destination_port_range                     = optional(string)
+        destination_port_ranges                    = optional(set(string))
+        source_address_prefix                      = optional(string)
+        source_address_prefixes                    = optional(set(string))
+        source_application_security_group_ids      = optional(set(string))
+        source_port_range                          = optional(string)
+        source_port_ranges                         = optional(set(string))
+        timeouts = optional(object({
+          create = optional(string)
+          delete = optional(string)
+          read   = optional(string)
+          update = optional(string)
+        }))
+      })), {})
     }), null)
     network_security_group_id                     = optional(string, null)
     private_endpoint_network_policies             = optional(string, "Disabled")
@@ -109,6 +132,7 @@ This object describes the subnets to create within the virtual network.
 - `create_network_security_group` = (Optional) - Whether to create a specific Network Security Group for the subnet. Defaults to false.
 - `network_security_group_config` = (Optional) - The configuration for the Network Security Group. Changing this forces a new resource to be created.
   `azure_default` = (Optional) - Whether to use the Azure default Network Security Group rules. Defaults to false.
+  `security_rules` = (Optional) - Security rules created only in this subnet's Network Security Group. The map key becomes the rule name. Merged over `default_rules` and `security_rules` (or over `security_rules` only when `azure_default = true`), so a rule reusing one of their names overrides it for this subnet. Priorities only have to be unique within the subnet. Requires `create_network_security_group = true`.
 - `network_security_group_id` = (Optional) - The ID of the Network Security Group to associate with the subnet. Changing this forces a new resource to be created.
 - `no_nsg_association` = (Optional) - Whether to associate a Network Security Group with the subnet. Defaults to false.
 - `nat_gateway`      = (Optional) - The NAT Gateway to associate with the subnet. Changing this forces a new resource to be created.
@@ -144,6 +168,18 @@ subnets = {
     create_network_security_group   = true
     network_security_group_config = {
       azure_default = true
+      security_rules = {
+        "Allow-Sql-out-to-WestEurope" = {
+          access                     = "Allow"
+          direction                  = "Outbound"
+          priority                   = 300
+          protocol                   = "Tcp"
+          destination_address_prefix = "Sql.WestEurope"
+          destination_port_range     = "1433"
+          source_address_prefix      = "VirtualNetwork"
+          source_port_range          = "*"
+        }
+      }
     }
   }
   "OtherSubnet" = {
@@ -164,6 +200,22 @@ DESCRIPTION
   validation {
     condition     = alltrue([for _, subnet in var.subnets : subnet.address_prefix != null || subnet.address_prefixes != null])
     error_message = "One of `address_prefix` or `address_prefixes` must be set."
+  }
+
+  validation {
+    condition = alltrue([
+      for _, subnet in var.subnets : subnet.create_network_security_group
+      if length(try(subnet.network_security_group_config.security_rules, {})) > 0
+    ])
+    error_message = "`network_security_group_config.security_rules` can only be set for subnets with `create_network_security_group = true`. Subnets without their own group share one, where a subnet rule would apply to every other subnet sharing it."
+  }
+
+  validation {
+    condition = alltrue([
+      for key, subnet in var.subnets : length(try(subnet.network_security_group_config.security_rules, {})) == 0
+      if key == "AzureBastionSubnet"
+    ])
+    error_message = "`network_security_group_config.security_rules` is not supported for the AzureBastionSubnet. Use `azure_bastion_security_rules` instead."
   }
 }
 
