@@ -54,6 +54,7 @@ output "subnets_with_nsg_azure_default" {
   value = local.subnets_with_nsg_azure_default
 }
 
-output "subnets_with_default_nsg" {
-  value = local.default_subnets
+output "subnets_without_own_nsg" {
+  description = "Subnets for which this module does not create a network security group"
+  value       = local.subnets_without_own_nsg
 }

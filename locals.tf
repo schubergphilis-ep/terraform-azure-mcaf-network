@@ -1,6 +1,6 @@
 locals {
   # Subnet selections
-  default_subnets = {
+  subnets_without_own_nsg = {
     for k, v in var.subnets :
     k => v if(
       !v.create_network_security_group &&
