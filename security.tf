@@ -1,7 +1,7 @@
 ## Externally managed NSGs, for subnets that bring their own
 resource "azurerm_subnet_network_security_group_association" "this" {
   for_each = {
-    for key, subnet in local.subnets_without_own_nsg :
+    for key, subnet in local.default_subnets :
     key => subnet if subnet.network_security_group_id != null && !subnet.no_nsg_association
   }
 
