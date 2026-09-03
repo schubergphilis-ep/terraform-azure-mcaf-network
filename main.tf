@@ -12,32 +12,28 @@ resource "azurerm_virtual_network" "this" {
   )
 }
 
-resource "azurerm_subnet" "this" {
+# Subnets live in ./modules/subnet so callers with an external VNet can use them alone.
+module "subnet" {
+  source   = "./modules/subnet"
   for_each = var.subnets
 
-  name                                          = each.value.name != null ? each.value.name : each.key
-  resource_group_name                           = azurerm_virtual_network.this.resource_group_name
+  name                 = each.value.name != null ? each.value.name : each.key
+  resource_group_name  = azurerm_virtual_network.this.resource_group_name
+  virtual_network_name = azurerm_virtual_network.this.name
+  address_prefixes     = each.value.address_prefixes
+
+  # The submodule needs this to create a group of its own.
+  location = var.location
+
+  # Name plus rules to create a group, or an id to associate the vnet-wide one.
+  network_security_group = lookup(local.subnet_network_security_group, each.key, null)
+  route_table_id         = each.value.route_table == null ? null : each.value.route_table.id
+
   default_outbound_access_enabled               = each.value.default_outbound_access_enabled
-  virtual_network_name                          = azurerm_virtual_network.this.name
-  address_prefixes                              = each.value.address_prefixes
-  private_endpoint_network_policies             = each.value.private_endpoint_network_policies != null ? each.value.private_endpoint_network_policies : "Disabled"
-  private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled != null ? each.value.private_link_service_network_policies_enabled : true
-
-  dynamic "delegation" {
-    for_each = each.value.delegate_to != null ? [each.value.delegate_to] : []
-
-    content {
-      name = split("/", each.value.delegate_to)[1]
-      service_delegation {
-        name    = each.value.delegate_to
-        actions = each.value.delegate_to_actions != null ? each.value.delegate_to_actions : lookup(var.subnet_delegations_actions, each.value.delegate_to, null)
-      }
-    }
-  }
-
-  service_endpoints = each.value.service_endpoints
-
-  depends_on = [
-    azurerm_virtual_network.this
-  ]
+  delegate_to                                   = each.value.delegate_to
+  delegate_to_actions                           = each.value.delegate_to_actions
+  private_endpoint_network_policies             = each.value.private_endpoint_network_policies
+  private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
+  service_endpoints                             = each.value.service_endpoints
+  subnet_delegations_actions                    = var.subnet_delegations_actions
 }
