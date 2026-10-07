@@ -35,7 +35,13 @@ resource "azurerm_subnet" "this" {
     }
   }
 
-  service_endpoints = each.value.service_endpoints
+  dynamic "service_endpoint" {
+    for_each = each.value.service_endpoints != null ? each.value.service_endpoints : []
+
+    content {
+      service = service_endpoint.value
+    }
+  }
 
   depends_on = [
     azurerm_virtual_network.this
