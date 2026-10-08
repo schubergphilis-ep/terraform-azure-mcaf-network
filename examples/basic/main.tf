@@ -9,6 +9,10 @@ terraform {
   }
 }
 
+provider "azurerm" {
+  features {}
+}
+
 module "network_ngw" {
   source = "../.."
 
