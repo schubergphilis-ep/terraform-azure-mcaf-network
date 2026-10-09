@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v1.0.1...v2.0.0) (2026-10-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* support azurerm provider v5 upgrade ([#8](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/issues/8))
+
+### 🧼 Refactoring
+
+* support azurerm provider v5 upgrade ([#8](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/issues/8)) ([79d6dd8](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/commit/79d6dd8a35ac274ccfd615e0ff024cb4ddcef8e4))
+
 ## [1.0.1](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v1.0.0...v1.0.1) (2026-08-06)
 
 
