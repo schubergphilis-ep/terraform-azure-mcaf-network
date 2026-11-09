@@ -99,82 +99,18 @@ variable "default_rules" {
       update = optional(string, "30")
     }))
   }))
-  default = {
-    "Allow-Https-in-from-vnets" = {
-      access                     = "Allow"
-      name                       = "Allow-Https-in-from-vnets"
-      description                = "Allow HTTPS traffic from VNets"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_range     = "443"
-      direction                  = "Inbound"
-      priority                   = 4095
-      protocol                   = "Tcp"
-      source_address_prefix      = "VirtualNetwork"
-      source_port_range          = "*"
-    },
-    "Allow-Http-out-to-vnets" = {
-      access                     = "Allow"
-      name                       = "Allow-Http-out-to-vnets"
-      description                = "Allow HTTP(S) traffic to VNets"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_ranges    = ["80", "443"]
-      direction                  = "Outbound"
-      priority                   = 4095
-      protocol                   = "Tcp"
-      source_address_prefix      = "VirtualNetwork"
-      source_port_range          = "*"
-    },
-    "Deny-Any-Any-Any-In" = {
-      access                     = "Deny"
-      name                       = "Deny-Any-Any-Any-In"
-      description                = "Deny all inbound traffic"
-      destination_address_prefix = "*"
-      destination_port_range     = "*"
-      direction                  = "Inbound"
-      priority                   = 4096
-      protocol                   = "*"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    },
-    "Deny-Any-Any-Any-Out" = {
-      access                     = "Deny"
-      name                       = "Deny-Any-Any-Any-Out"
-      description                = "Deny all outbound traffic"
-      destination_address_prefix = "*"
-      destination_port_range     = "*"
-      direction                  = "Outbound"
-      priority                   = 4096
-      protocol                   = "*"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    }
-  }
-  nullable    = false
-  description = <<DESCRIPTION
-  A map of default security rules to be created in **every** Network Security Group, except if you specificy "network_security_group_config -> Azure default" in the subnet configuration.
-  but of course, you can override these defaults by specifying the same rule in a new `default_rules` map.
-  This map is merged with the security rules map to create the final set of rules for the Network Security Group.
-
-```hcl
-subnets = {
-  "ToolingSubnet" = {
-    address_prefixes                = ["100.0.3.0/24"]
-    default_outbound_access_enabled = false
-    create_network_security_group   = true
-    network_security_group_config = {
-      azure_default = true
-    }
-  }
-```hcl
-
-DESCRIPTION
+  default     = null
+  description = <<-EOT
+    Rules added to every network security group this module makes, except for subnets using
+    `network_security_group_config.azure_default`. Null keeps the built-in set listed in
+    [./modules/nsg](./modules/nsg/variables.tf); a map replaces it. `security_rules` win over these by name.
+  EOT
 }
 
 variable "azure_bastion_source_ip_prefixes" {
-  description = "The source IP prefixes that can access the Azure Bastion service, recommendation is not to use the default!"
+  description = "The source IP prefixes that can access the Azure Bastion service over HTTPS. Null allows the whole Internet (`0.0.0.0/0`), so narrow it."
   type        = set(string)
-  default     = ["0.0.0.0/0"]
-  nullable    = false
+  default     = null
 }
 
 variable "azure_bastion_security_rules" {
@@ -202,153 +138,10 @@ variable "azure_bastion_security_rules" {
       update = optional(string, "30")
     }))
   }))
-  default = {
-    "Allow-Https-in-from-Internet" = {
-      access                     = "Allow"
-      name                       = "Allow-Https-in-from-Internet"
-      description                = "Allow HTTPS traffic from the Internet"
-      destination_address_prefix = "*"
-      destination_port_range     = "443"
-      direction                  = "Inbound"
-      priority                   = 4040
-      protocol                   = "Tcp"
-      source_address_prefix      = null
-      source_address_prefixes    = null
-      source_port_range          = "*"
-    },
-    "Allow-Https-in-from-GatewayManager" = {
-      access                     = "Allow"
-      name                       = "Allow-Https-in-from-GatewayManager"
-      description                = "Allow HTTPS traffic from the GatewayManager"
-      destination_address_prefix = "*"
-      destination_port_range     = "443"
-      direction                  = "Inbound"
-      priority                   = 4041
-      protocol                   = "Tcp"
-      source_address_prefix      = "GatewayManager"
-      source_port_range          = "*"
-    },
-    "Allow-DataPlane-in-from-VirtualNetwork" = {
-      access                     = "Allow"
-      name                       = "Allow-DataPlane-in-from-VirtualNetwork"
-      description                = "Allow DataPlane traffic from the VirtualNetwork"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_range     = "8080"
-      direction                  = "Inbound"
-      priority                   = 4042
-      protocol                   = "Tcp"
-      source_address_prefix      = "VirtualNetwork"
-      source_port_range          = "*"
-    },
-    "Allow-DataPlane-in-from-VirtualNetwork-5701" = {
-      access                     = "Allow"
-      name                       = "Allow-DataPlane-in-from-VirtualNetwork-5701"
-      description                = "Allow DataPlane traffic from the VirtualNetwork on port 5701"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_range     = "5701"
-      direction                  = "Inbound"
-      priority                   = 4043
-      protocol                   = "Tcp"
-      source_address_prefix      = "VirtualNetwork"
-      source_port_range          = "*"
-    },
-    "Allow-Https-in-from-AzureLoadBalancer" = {
-      access                     = "Allow"
-      name                       = "Allow-Https-in-from-AzureLoadBalancer"
-      description                = "Allow HTTPS traffic from the AzureLoadBalancer"
-      destination_address_prefix = "*"
-      destination_port_range     = "443"
-      direction                  = "Inbound"
-      priority                   = 4044
-      protocol                   = "Tcp"
-      source_address_prefix      = "AzureLoadBalancer"
-      source_port_range          = "*"
-    },
-    "Allow-Rdp-out-to-VirtualNetwork" = {
-      access                     = "Allow"
-      name                       = "Allow-Rdp-out-to-VirtualNetwork"
-      description                = "Allow RDP traffic to the VirtualNetwork"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_range     = "3389"
-      direction                  = "Outbound"
-      priority                   = 4040
-      protocol                   = "Tcp"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    },
-    "Allow-Ssh-out-to-VirtualNetwork" = {
-      access                     = "Allow"
-      name                       = "Allow-Ssh-out-to-VirtualNetwork"
-      description                = "Allow SSH traffic to the VirtualNetwork"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_range     = "22"
-      direction                  = "Outbound"
-      priority                   = 4041
-      protocol                   = "Tcp"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    },
-    "Allow-DataPlane-out-to-VirtualNetwork-8080" = {
-      access                     = "Allow"
-      name                       = "Allow-DataPlane-out-to-VirtualNetwork-8080"
-      description                = "Allow DataPlane traffic to the VirtualNetwork on port 8080"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_range     = "8080"
-      direction                  = "Outbound"
-      priority                   = 4042
-      protocol                   = "Tcp"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    },
-    "Allow-DataPlane-out-to-VirtualNetwork-5701" = {
-      access                     = "Allow"
-      name                       = "Allow-DataPlane-out-to-VirtualNetwork-5701"
-      description                = "Allow DataPlane traffic to the VirtualNetwork on port 5701"
-      destination_address_prefix = "VirtualNetwork"
-      destination_port_range     = "5701"
-      direction                  = "Outbound"
-      priority                   = 4043
-      protocol                   = "Tcp"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    },
-    "Allow-Https-out-to-AzureCloud" = {
-      access                     = "Allow"
-      name                       = "Allow-Https-out-to-AzureCloud"
-      description                = "Allow HTTPS traffic to the AzureCloud"
-      destination_address_prefix = "AzureCloud"
-      destination_port_range     = "443"
-      direction                  = "Outbound"
-      priority                   = 4044
-      protocol                   = "Tcp"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    },
-    "Allow-Http-out-to-Internet" = {
-      access                     = "Allow"
-      name                       = "Allow-Http-out-to-Internet"
-      description                = "Allow HTTP traffic to the Internet"
-      destination_address_prefix = "Internet"
-      destination_port_range     = "80"
-      direction                  = "Outbound"
-      priority                   = 4045
-      protocol                   = "Tcp"
-      source_address_prefix      = "*"
-      source_port_range          = "*"
-    }
-  }
-  nullable    = false
-  description = <<DESCRIPTION
-  A map of security rules to be created in the AzureBastionSubnet Network Security Group. The key of the map is the name of the security rule.
-  This Map contains the required rules for the Azure Bastion Subnet. These rules are required for the Azure Bastion service to work properly.
-  This map is merged with the default rules and security rules to create the final set of rules for the Azure Bastion Subnet.
-
-```hcl
-subnets = {
-  "AzureBastionSubnet" = {
-    address_prefixes                = ["100.0.5.0/24"]
-  }
-```hcl
-
-DESCRIPTION
+  default     = null
+  description = <<-EOT
+    Rules Azure Bastion needs on the AzureBastionSubnet group. Null keeps the built-in set listed in
+    [./modules/nsg](./modules/nsg/variables.tf); a map replaces it. `default_rules` and `security_rules` win over
+    these by name.
+  EOT
 }

@@ -41,11 +41,14 @@ variable "tags" {
 
 variable "network_security_group" {
   type = object({
-    id                  = optional(string)
-    name                = optional(string)
-    resource_group_name = optional(string)
-    associate           = optional(bool, true)
-    rules = optional(map(object({
+    id                    = optional(string)
+    name                  = optional(string)
+    resource_group_name   = optional(string)
+    associate             = optional(bool, true)
+    include_default_rules = optional(bool, true)
+    azure_bastion         = optional(bool)
+    security_rules = optional(map(object({
+      name                                       = optional(string)
       priority                                   = number
       direction                                  = string
       access                                     = string
@@ -73,9 +76,11 @@ variable "network_security_group" {
   description = <<-EOT
     Network security group for the subnet, associated unless `associate` is false. Give `id` to
     associate a group owned elsewhere, and nothing else is done to it. Give `name` instead to have
-    this module create the group and its `rules`, in `resource_group_name` or alongside the virtual
-    network. Rule keys become rule names. `associate = false` creates the group and leaves the
-    subnet unattached, and only makes sense with `name`.
+    this module create the group, in `resource_group_name` or alongside the virtual network, with
+    the rules ./modules/nsg builds: its default rules unless `include_default_rules` is false,
+    `security_rules` on top, and Azure Bastion's when `azure_bastion` is true. Leave `azure_bastion`
+    unset to get them for a subnet named AzureBastionSubnet. `associate = false` creates the group
+    and leaves the subnet unattached, and only makes sense with `name`.
   EOT
 
   validation {
@@ -100,9 +105,9 @@ variable "network_security_group" {
     condition = (
       var.network_security_group == null
       || var.network_security_group.id == null
-      || length(var.network_security_group.rules) == 0
+      || length(var.network_security_group.security_rules) == 0
     )
-    error_message = "network_security_group.rules cannot be given alongside id: rules are only created on a group this module owns. Declare them where the group is created."
+    error_message = "network_security_group.security_rules cannot be given alongside id: rules are only created on a group this module owns. Declare them where the group is created."
   }
 
   validation {
@@ -113,6 +118,24 @@ variable "network_security_group" {
     )
     error_message = "network_security_group.associate = false cannot be given alongside id: an id exists only to be associated, so there would be nothing left to do."
   }
+}
+
+variable "default_rules" {
+  type        = any
+  default     = null
+  description = "Replaces the default rules of a group created here. Null keeps the built-in set. Same shape as `default_rules` in ./modules/nsg, which checks it."
+}
+
+variable "azure_bastion_security_rules" {
+  type        = any
+  default     = null
+  description = "Replaces the Azure Bastion rules of a group created here. Null keeps the built-in set. Same shape as `azure_bastion_security_rules` in ./modules/nsg, which checks it."
+}
+
+variable "azure_bastion_source_ip_prefixes" {
+  type        = set(string)
+  default     = null
+  description = "Source prefixes allowed by the Bastion Internet rule of a group created here. Null keeps the built-in default, which allows the whole Internet."
 }
 
 variable "route_table_id" {

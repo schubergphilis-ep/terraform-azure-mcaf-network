@@ -36,6 +36,11 @@ run "plan" {
   command = plan
 
   assert {
+    condition     = module.nsg.name == "my-vnet-nsg" && contains(module.nsg.rule_names, "Deny-Any-Any-Any-In")
+    error_message = "the shared group should be named after the vnet and carry the default rules"
+  }
+
+  assert {
     condition     = azurerm_virtual_network.this.name == "my-vnet"
     error_message = "Unexpected virtual network name"
   }

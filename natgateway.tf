@@ -7,12 +7,7 @@ resource "azurerm_nat_gateway" "this" {
   sku_name            = var.natgateway.sku
   zones               = var.natgateway.zones
 
-  tags = merge(
-    try(var.tags),
-    tomap({
-      "Resource Type" = "NAT Gateway"
-    })
-  )
+  tags = var.tags
 }
 
 resource "azurerm_public_ip" "this" {
@@ -27,12 +22,7 @@ resource "azurerm_public_ip" "this" {
   sku_tier            = var.public_ip.sku_tier
   zones               = var.public_ip.zones == null ? var.natgateway.zones : var.public_ip.zones
 
-  tags = merge(
-    try(var.tags),
-    tomap({
-      "Resource Type" = "Public IP"
-    })
-  )
+  tags = var.tags
 }
 
 resource "azurerm_nat_gateway_public_ip_association" "this" {

@@ -141,13 +141,8 @@ run "an_nsg_id_is_associated_and_nothing_is_created" {
   }
 
   assert {
-    condition     = length(azurerm_network_security_group.this) == 0
-    error_message = "an id means the group is owned elsewhere, so none should be created"
-  }
-
-  assert {
-    condition     = length(azurerm_network_security_rule.this) == 0
-    error_message = "no rules should be created against a group owned elsewhere"
+    condition     = length(module.nsg) == 0
+    error_message = "an id means the group is owned elsewhere, so none should be created, and no rules with it"
   }
 
   assert {
@@ -169,7 +164,7 @@ run "a_named_nsg_is_created_with_its_rules" {
     location         = "westeurope"
     network_security_group = {
       name = "node-subnet-nsg"
-      rules = {
+      security_rules = {
         allow-gateway-in = {
           priority                   = 100
           direction                  = "Inbound"
@@ -185,23 +180,85 @@ run "a_named_nsg_is_created_with_its_rules" {
   }
 
   assert {
-    condition     = azurerm_network_security_group.this[0].name == "node-subnet-nsg"
+    condition     = module.nsg[0].name == "node-subnet-nsg"
     error_message = "the group should be created under the name given"
   }
 
   assert {
-    condition     = azurerm_network_security_group.this[0].resource_group_name == "rg-platform-network"
+    condition     = module.nsg[0].resource_group_name == "rg-platform-network"
     error_message = "the group should default to the subnet's resource group"
   }
 
   assert {
-    condition     = azurerm_network_security_rule.this["allow-gateway-in"].priority == 100
+    condition     = contains(module.nsg[0].rule_names, "allow-gateway-in")
     error_message = "the rule key should become a rule on the created group"
+  }
+
+  assert {
+    condition     = contains(module.nsg[0].rule_names, "Deny-Any-Any-Any-In")
+    error_message = "a direct caller should get the same default rules the root module gives its subnets"
   }
 
   assert {
     condition     = length(azurerm_subnet_network_security_group_association.this) == 1
     error_message = "a created group should be associated with the subnet"
+  }
+}
+
+run "a_subnet_named_azurebastionsubnet_gets_the_bastion_rules" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "AzureBastionSubnet"
+    address_prefixes = ["100.0.4.0/26"]
+    location         = "westeurope"
+    network_security_group = {
+      name = "bastion-nsg"
+    }
+  }
+
+  assert {
+    condition     = contains(module.nsg[0].rule_names, "Allow-Https-in-from-GatewayManager") && contains(module.nsg[0].rule_names, "Deny-Any-Any-Any-In")
+    error_message = "the subnet's name is enough to get Bastion's rules, on top of the defaults"
+  }
+}
+
+run "a_group_can_skip_the_default_rules" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    location         = "westeurope"
+    network_security_group = {
+      name                  = "node-subnet-nsg"
+      include_default_rules = false
+      security_rules = {
+        allow-https = {
+          priority                   = 100
+          direction                  = "Inbound"
+          access                     = "Allow"
+          protocol                   = "Tcp"
+          source_address_prefix      = "*"
+          source_port_range          = "*"
+          destination_address_prefix = "*"
+          destination_port_range     = "443"
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = module.nsg[0].rule_names == ["allow-https"]
+    error_message = "include_default_rules = false should leave only the rules given"
   }
 }
 
@@ -219,7 +276,7 @@ run "an_nsg_is_created_without_being_associated" {
     network_security_group = {
       name      = "node-subnet-nsg"
       associate = false
-      rules = {
+      security_rules = {
         allow-gateway-in = {
           priority                   = 100
           direction                  = "Inbound"
@@ -235,7 +292,7 @@ run "an_nsg_is_created_without_being_associated" {
   }
 
   assert {
-    condition     = azurerm_network_security_group.this[0].name == "node-subnet-nsg" && length(azurerm_network_security_rule.this) == 1
+    condition     = module.nsg[0].name == "node-subnet-nsg" && contains(module.nsg[0].rule_names, "allow-gateway-in")
     error_message = "associate = false should still create the group and its rules"
   }
 
@@ -271,7 +328,7 @@ run "reject_not_associating_an_nsg_id" {
   ]
 }
 
-run "reject_rules_alongside_an_nsg_id" {
+run "reject_security_rules_alongside_an_nsg_id" {
   command = plan
 
   module {
@@ -283,7 +340,7 @@ run "reject_rules_alongside_an_nsg_id" {
     address_prefixes = ["100.0.1.0/24"]
     network_security_group = {
       id = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/networkSecurityGroups/existing"
-      rules = {
+      security_rules = {
         allow-in = { priority = 100, direction = "Inbound", access = "Allow", protocol = "Tcp" }
       }
     }

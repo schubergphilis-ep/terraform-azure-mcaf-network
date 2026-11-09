@@ -4,12 +4,7 @@ resource "azurerm_virtual_network" "this" {
   resource_group_name = var.resource_group_name
   address_space       = var.vnet_address_space
   dns_servers         = var.vnet_dns_servers
-  tags = merge(
-    try(var.tags),
-    tomap({
-      "Resource Type" = "Virtual Network"
-    })
-  )
+  tags                = var.tags
 }
 
 # Subnets live in ./modules/subnet so callers with an external VNet can use them alone.
@@ -22,8 +17,13 @@ module "subnet" {
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = each.value.address_prefixes
 
-  # The submodule needs this to create a group of its own.
+  # The submodule needs these to create a group of its own.
   location = var.location
+  tags     = var.tags
+
+  default_rules                    = var.default_rules
+  azure_bastion_security_rules     = var.azure_bastion_security_rules
+  azure_bastion_source_ip_prefixes = var.azure_bastion_source_ip_prefixes
 
   # Name plus rules to create a group, or an id to associate the vnet-wide one.
   network_security_group = lookup(local.subnet_network_security_group, each.key, null)
