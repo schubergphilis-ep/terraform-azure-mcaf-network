@@ -161,9 +161,10 @@ subnets = {
 
 DESCRIPTION
 
+  # `address_prefix` is kept in the type for compatibility but has never had any effect.
   validation {
-    condition     = alltrue([for _, subnet in var.subnets : subnet.address_prefix != null || subnet.address_prefixes != null])
-    error_message = "One of `address_prefix` or `address_prefixes` must be set."
+    condition     = alltrue([for _, subnet in var.subnets : try(length(subnet.address_prefixes), 0) > 0])
+    error_message = "Each subnet needs at least one entry in `address_prefixes`. The singular `address_prefix` is ignored — azurerm has no such argument — so move its value into `address_prefixes = [...]`."
   }
 }
 
@@ -305,6 +306,7 @@ variable "subnet_delegations_actions" {
     "Microsoft.Netapp/volumes" = [
       "Microsoft.Network/networkinterfaces/*", "Microsoft.Network/virtualNetworks/subnets/join/action"
     ]
+    "Microsoft.Network/applicationGateways"          = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
     "Microsoft.Network/dnsResolvers"                 = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
     "Microsoft.Network/fpgaNetworkInterfaces"        = ["Microsoft.Network/virtualNetworks/subnets/action"]
     "Microsoft.Network/managedResolvers"             = ["Microsoft.Network/virtualNetworks/subnets/action"]

@@ -11,7 +11,7 @@ output "vnet_id" {
 output "subnets" {
   description = "A map of subnet names to their corresponding names, IDs and address prefixes"
   value = {
-    for subnet in azurerm_subnet.this : subnet.name => {
+    for subnet in module.subnet : subnet.name => {
       name             = subnet.name
       id               = subnet.id
       address_prefixes = subnet.address_prefixes
@@ -31,7 +31,7 @@ output "private_dns_zone_list" {
 
 output "all_subnets" {
   description = "A list of all subnets created"
-  value = [for subnet in azurerm_subnet.this : {
+  value = [for subnet in module.subnet : {
     name = subnet.name
     id   = subnet.id
   }]
@@ -39,11 +39,13 @@ output "all_subnets" {
 
 output "all_network_security_groups" {
   description = "A map of all network security groups created keyed by subnet"
-  value = { for subnet, nsg in local.all_custom_network_security_groups : subnet => {
-    name     = nsg.name
-    id       = nsg.id
-    location = nsg.location
-  } }
+  value = {
+    for key, subnet in module.subnet : key => {
+      name     = subnet.network_security_group_name
+      id       = subnet.network_security_group_id
+      location = var.location
+    } if subnet.network_security_group_name != null
+  }
 }
 
 output "subnets_with_nsg" {
