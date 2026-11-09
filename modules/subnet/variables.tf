@@ -54,10 +54,10 @@ variable "network_security_group" {
       access                                     = string
       protocol                                   = string
       description                                = optional(string)
-      source_port_ranges                         = optional(set(string), [])
-      destination_port_ranges                    = optional(set(string), [])
-      source_address_prefixes                    = optional(set(string), [])
-      destination_address_prefixes               = optional(set(string), [])
+      source_port_ranges                         = set(string)
+      destination_port_ranges                    = set(string)
+      source_address_prefixes                    = set(string)
+      destination_address_prefixes               = set(string)
       source_application_security_group_ids      = optional(set(string))
       destination_application_security_group_ids = optional(set(string))
       timeouts = optional(object({

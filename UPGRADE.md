@@ -57,7 +57,7 @@ Every rule, in `security_rules`, `default_rules`, `azure_bastion_security_rules`
 | `source_address_prefix = "VirtualNetwork"` | `source_address_prefixes = ["VirtualNetwork"]` |
 | `destination_address_prefix = "*"` | `destination_address_prefixes = ["*"]` |
 
-Each list needs at least one entry, and a rule that still uses a singular attribute fails at plan. Azure takes `*` and tags such as `VirtualNetwork` only in the singular argument, and several entries only in the plural one. The module therefore sends a one-entry list as the singular argument and a longer list as the plural one. Give `*` and tags as the single entry of a list; several entries must be plain ports, ranges or CIDRs.
+All four lists are required, and a rule that still uses a singular attribute fails at plan with a missing-attribute error. Azure takes `*` and tags such as `VirtualNetwork` only in the singular argument, and several entries only in the plural one. The module therefore sends a one-entry list as the singular argument and a longer list as the plural one. Give `*` and tags as the single entry of a list; several entries must be plain ports, ranges or CIDRs.
 
 The built-in default rules reach Azure exactly as before. A rule you had written with a one-entry plural list, such as `source_address_prefixes = ["10.0.0.0/8"]`, now reaches Azure as the singular argument and is updated in place, and so is Bastion's `Allow-Https-in-from-Internet`, whose single prefix `0.0.0.0/0` was a one-entry list.
 

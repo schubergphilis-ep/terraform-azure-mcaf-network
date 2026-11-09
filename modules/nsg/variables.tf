@@ -30,12 +30,12 @@ variable "security_rules" {
     priority                                   = number
     protocol                                   = string
     description                                = optional(string)
-    destination_address_prefixes               = optional(set(string), [])
+    destination_address_prefixes               = set(string)
     destination_application_security_group_ids = optional(set(string))
-    destination_port_ranges                    = optional(set(string), [])
-    source_address_prefixes                    = optional(set(string), [])
+    destination_port_ranges                    = set(string)
+    source_address_prefixes                    = set(string)
     source_application_security_group_ids      = optional(set(string))
-    source_port_ranges                         = optional(set(string), [])
+    source_port_ranges                         = set(string)
     timeouts = optional(object({
       create = optional(string)
       delete = optional(string)
@@ -45,7 +45,7 @@ variable "security_rules" {
   }))
   default     = {}
   nullable    = false
-  description = "Rules specific to this group. A rule is named by `name`, or by its key when `name` is unset, and replaces a default rule of the same name. Ports and addresses are lists only, each with at least one entry. `*` and tags such as `VirtualNetwork` go as the single entry of a list, and several entries must be plain ports, ranges or CIDRs."
+  description = "Rules specific to this group. A rule is named by `name`, or by its key when `name` is unset, and replaces a default rule of the same name. Ports and addresses are lists only, and all four lists are required. `*` and tags such as `VirtualNetwork` go as the single entry of a list, and several entries must be plain ports, ranges or CIDRs."
 }
 
 variable "include_default_rules" {
@@ -70,12 +70,12 @@ variable "default_rules" {
     priority                                   = number
     protocol                                   = string
     description                                = optional(string)
-    destination_address_prefixes               = optional(set(string), [])
+    destination_address_prefixes               = set(string)
     destination_application_security_group_ids = optional(set(string), null)
-    destination_port_ranges                    = optional(set(string), [])
-    source_address_prefixes                    = optional(set(string), [])
+    destination_port_ranges                    = set(string)
+    source_address_prefixes                    = set(string)
     source_application_security_group_ids      = optional(set(string), null)
-    source_port_ranges                         = optional(set(string), [])
+    source_port_ranges                         = set(string)
     timeouts = optional(object({
       create = optional(string, "30m")
       delete = optional(string, "30m")
@@ -156,12 +156,12 @@ variable "azure_bastion_security_rules" {
     priority                                   = number
     protocol                                   = string
     description                                = optional(string)
-    destination_address_prefixes               = optional(set(string), [])
+    destination_address_prefixes               = set(string)
     destination_application_security_group_ids = optional(set(string), null)
-    destination_port_ranges                    = optional(set(string), [])
-    source_address_prefixes                    = optional(set(string), [])
+    destination_port_ranges                    = set(string)
+    source_address_prefixes                    = set(string)
     source_application_security_group_ids      = optional(set(string), null)
-    source_port_ranges                         = optional(set(string), [])
+    source_port_ranges                         = set(string)
     timeouts = optional(object({
       create = optional(string, "30m")
       delete = optional(string, "30m")

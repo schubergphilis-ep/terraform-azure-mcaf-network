@@ -3,15 +3,15 @@ variable "security_rules" {
     name                                       = string
     access                                     = string
     description                                = optional(string)
-    destination_address_prefixes               = optional(set(string), [])
+    destination_address_prefixes               = set(string)
     destination_application_security_group_ids = optional(set(string))
-    destination_port_ranges                    = optional(set(string), [])
+    destination_port_ranges                    = set(string)
     direction                                  = string
     priority                                   = number
     protocol                                   = string
-    source_address_prefixes                    = optional(set(string), [])
+    source_address_prefixes                    = set(string)
     source_application_security_group_ids      = optional(set(string))
-    source_port_ranges                         = optional(set(string), [])
+    source_port_ranges                         = set(string)
     timeouts = optional(object({
       create = optional(string)
       delete = optional(string)
@@ -22,7 +22,7 @@ variable "security_rules" {
   default     = {}
   nullable    = false
   description = <<DESCRIPTION
-Rules added to every network security group this module creates, the shared one included, on top of `default_rules`. A rule replaces a default or Bastion rule with the same `name`. The attributes are those of `azurerm_network_security_rule`, minus `resource_group_name` and `network_security_group_name`, which are set for you, and with ports and addresses as lists only: `source_port_ranges`, `destination_port_ranges`, `source_address_prefixes` and `destination_address_prefixes`, each needing at least one entry. `*` and tags such as `VirtualNetwork` are accepted by Azure only on their own, so give them as the single entry of a list; several entries must be plain ports, ranges or CIDRs. `timeouts` take durations such as `30m`. The key is free-form.
+Rules added to every network security group this module creates, the shared one included, on top of `default_rules`. A rule replaces a default or Bastion rule with the same `name`. The attributes are those of `azurerm_network_security_rule`, minus `resource_group_name` and `network_security_group_name`, which are set for you, and with ports and addresses as lists only: `source_port_ranges`, `destination_port_ranges`, `source_address_prefixes` and `destination_address_prefixes`, all four required. `*` and tags such as `VirtualNetwork` are accepted by Azure only on their own, so give them as the single entry of a list; several entries must be plain ports, ranges or CIDRs. `timeouts` take durations such as `30m`. The key is free-form.
 
 ```hcl
 security_rules = {
@@ -51,12 +51,12 @@ variable "default_rules" {
     priority                                   = number
     protocol                                   = string
     description                                = optional(string)
-    destination_address_prefixes               = optional(set(string), [])
+    destination_address_prefixes               = set(string)
     destination_application_security_group_ids = optional(set(string), null)
-    destination_port_ranges                    = optional(set(string), [])
-    source_address_prefixes                    = optional(set(string), [])
+    destination_port_ranges                    = set(string)
+    source_address_prefixes                    = set(string)
     source_application_security_group_ids      = optional(set(string), null)
-    source_port_ranges                         = optional(set(string), [])
+    source_port_ranges                         = set(string)
     timeouts = optional(object({
       create = optional(string, "30m")
       delete = optional(string, "30m")
@@ -86,12 +86,12 @@ variable "azure_bastion_security_rules" {
     priority                                   = number
     protocol                                   = string
     description                                = optional(string)
-    destination_address_prefixes               = optional(set(string), [])
+    destination_address_prefixes               = set(string)
     destination_application_security_group_ids = optional(set(string), null)
-    destination_port_ranges                    = optional(set(string), [])
-    source_address_prefixes                    = optional(set(string), [])
+    destination_port_ranges                    = set(string)
+    source_address_prefixes                    = set(string)
     source_application_security_group_ids      = optional(set(string), null)
-    source_port_ranges                         = optional(set(string), [])
+    source_port_ranges                         = set(string)
     timeouts = optional(object({
       create = optional(string, "30m")
       delete = optional(string, "30m")

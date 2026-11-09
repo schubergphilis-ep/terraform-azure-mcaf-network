@@ -360,7 +360,16 @@ run "reject_security_rules_alongside_an_nsg_id" {
     network_security_group = {
       id = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/networkSecurityGroups/existing"
       security_rules = {
-        allow-in = { priority = 100, direction = "Inbound", access = "Allow", protocol = "Tcp" }
+        allow-in = {
+          priority                     = 100
+          direction                    = "Inbound"
+          access                       = "Allow"
+          protocol                     = "Tcp"
+          source_port_ranges           = ["*"]
+          destination_port_ranges      = ["443"]
+          source_address_prefixes      = ["*"]
+          destination_address_prefixes = ["*"]
+        }
       }
     }
   }

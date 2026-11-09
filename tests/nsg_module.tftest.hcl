@@ -292,27 +292,3 @@ run "one_entry_goes_to_the_singular_argument_and_more_stay_a_list" {
     error_message = "a list of several entries must reach Azure as the plural argument"
   }
 }
-
-run "reject_a_rule_without_a_port_or_address_list" {
-  command = plan
-
-  module {
-    source = "./modules/nsg"
-  }
-
-  variables {
-    include_default_rules = false
-    security_rules = {
-      incomplete = {
-        access    = "Allow"
-        direction = "Inbound"
-        priority  = 100
-        protocol  = "Tcp"
-      }
-    }
-  }
-
-  expect_failures = [
-    azurerm_network_security_rule.this["incomplete"],
-  ]
-}

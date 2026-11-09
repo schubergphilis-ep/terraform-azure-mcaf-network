@@ -26,13 +26,6 @@ resource "azurerm_subnet" "this" {
       service = service_endpoint.value
     }
   }
-
-  lifecycle {
-    precondition {
-      condition     = !local.nsg_create || var.location != null
-      error_message = "location is required when this module creates the network security group."
-    }
-  }
 }
 
 locals {

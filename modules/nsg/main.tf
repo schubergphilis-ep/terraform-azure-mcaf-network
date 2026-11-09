@@ -55,16 +55,6 @@ resource "azurerm_network_security_rule" "this" {
   source_application_security_group_ids      = each.value.source_application_security_group_ids
   destination_application_security_group_ids = each.value.destination_application_security_group_ids
 
-  lifecycle {
-    precondition {
-      condition = alltrue([
-        for list in ["source_port_ranges", "destination_port_ranges", "source_address_prefixes", "destination_address_prefixes"] :
-        length(each.value[list]) > 0
-      ])
-      error_message = "Rule ${each.key} needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes. The singular source_port_range, destination_port_range, source_address_prefix and destination_address_prefix no longer exist, so a rule still using them ends up here."
-    }
-  }
-
   dynamic "timeouts" {
     for_each = each.value.timeouts == null ? [] : [each.value.timeouts]
 

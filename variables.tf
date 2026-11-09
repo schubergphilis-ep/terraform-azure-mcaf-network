@@ -62,7 +62,7 @@ DESCRIPTION
 variable "subnets" {
   type = map(object({
     name                            = optional(string)
-    address_prefixes                = optional(list(string))
+    address_prefixes                = list(string)
     default_outbound_access_enabled = optional(bool, false)
     delegate_to                     = optional(string, null)
     delegate_to_actions             = optional(list(string), null)
@@ -163,8 +163,8 @@ DESCRIPTION
   }
 
   validation {
-    condition     = alltrue([for _, subnet in var.subnets : try(length(subnet.address_prefixes), 0) > 0])
-    error_message = "Each subnet needs at least one entry in `address_prefixes`. The singular `address_prefix` no longer exists, so move its value into `address_prefixes = [...]`."
+    condition     = alltrue([for _, subnet in var.subnets : length(subnet.address_prefixes) > 0])
+    error_message = "Each subnet needs at least one entry in `address_prefixes`."
   }
 }
 
