@@ -28,7 +28,7 @@ moved {
 
 `AzureBastionSubnet` moves like every other subnet. The submodule creates the rules before it attaches the group, so the group never sits on the subnet carrying only Azure's default rules.
 
-`address_prefixes` is now checked on each subnet by this module. The singular `address_prefix` is still accepted but ignored, as it always was: `azurerm` removed the argument and no resource read it, so a subnet that only sets it already failed at plan. It now fails with a clearer message.
+`address_prefixes` is now checked on each subnet by this module, and the singular `address_prefix` is gone from the `subnets` type. It was accepted but ignored, because `azurerm` removed the argument and no resource read it, so a subnet that only sets it already failed at plan. It now fails with a clearer message.
 
 The minimum stays `azurerm` v5, which `v2.0.0` already required. The constraint is widened from `~> 5` to `>= 5`.
 
@@ -46,6 +46,21 @@ Root module outputs keep their names and shape: `subnets`, `all_subnets` and `al
 > [!IMPORTANT]
 > This module cannot ship the `moved` blocks for the subnets and their per-subnet groups. A `moved` block takes literal addresses, so it cannot be generated with `for_each`, and the subnet keys are yours. The one keyless block the module could ship, from `azurerm_subnet.this` to `module.subnet.azurerm_subnet.this`, targets an address that does not exist once `module.subnet` has a `for_each`. Terraform accepts it without an error and plans to destroy and recreate every subnet and everything attached to them.
 
+### Security rules take lists only
+
+Every rule, in `security_rules`, `default_rules`, `azure_bastion_security_rules` and the subnet module's `network_security_group.security_rules`, now takes lists only. The singular attributes are gone:
+
+| Old | New |
+|---|---|
+| `source_port_range = "*"` | `source_port_ranges = ["*"]` |
+| `destination_port_range = "443"` | `destination_port_ranges = ["443"]` |
+| `source_address_prefix = "VirtualNetwork"` | `source_address_prefixes = ["VirtualNetwork"]` |
+| `destination_address_prefix = "*"` | `destination_address_prefixes = ["*"]` |
+
+Each list needs at least one entry, and a rule that still uses a singular attribute fails at plan. Azure takes `*` and tags such as `VirtualNetwork` only in the singular argument, and several entries only in the plural one. The module therefore sends a one-entry list as the singular argument and a longer list as the plural one. Give `*` and tags as the single entry of a list; several entries must be plain ports, ranges or CIDRs.
+
+The built-in default rules reach Azure exactly as before. A rule you had written with a one-entry plural list, such as `source_address_prefixes = ["10.0.0.0/8"]`, now reaches Azure as the singular argument and is updated in place, and so is Bastion's `Allow-Https-in-from-Internet`, whose single prefix `0.0.0.0/0` was a one-entry list.
+
 ### Other behaviour changes
 
 Each of these fixes a bug, and each changes what an existing configuration plans. Check them against yours before applying.
@@ -60,7 +75,7 @@ Each of these fixes a bug, and each changes what an existing configuration plans
 
 1. Upgrade from `v2.x`. If you are on `v1.x`, upgrade to `v2.0.0` first: it moves the module to `azurerm` v5 and is a separate step from this one.
 
-2. Replace any singular `address_prefix` with `address_prefixes`:
+2. Replace any singular `address_prefix` with `address_prefixes`, and rewrite every security rule with lists, as described under *Security rules take lists only*:
 
    ```hcl
    "CoreSubnet" = { address_prefixes = ["100.0.1.0/24"] }
@@ -114,6 +129,6 @@ Each of these fixes a bug, and each changes what an existing configuration plans
    }
    ```
 
-8. Run `terraform plan` and confirm it reports `0 to add` and `0 to destroy`, apart from what the warnings and *Other behaviour changes* above describe: the route table associations `route_table` now creates, and the groups, public IP and DNS link that come or go. The only other changes should be in-place: the shared group's rules gain their `description`, and the `Resource Type` tag goes away. Anything else means a block is missing or a key is wrong — do not apply until the plan matches.
+8. Run `terraform plan` and confirm it reports `0 to add` and `0 to destroy`, apart from what the warnings and *Other behaviour changes* above describe: the route table associations `route_table` now creates, and the groups, public IP and DNS link that come or go. The only other changes should be in-place: the shared group's rules gain their `description`, rules written with a one-entry plural list, and Bastion's Internet rule, move to the singular argument, and the `Resource Type` tag goes away. Anything else means a block is missing or a key is wrong — do not apply until the plan matches.
 
 9. Apply, then drop the `moved` blocks once every consumer has upgraded.

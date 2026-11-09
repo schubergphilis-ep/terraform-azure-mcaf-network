@@ -62,7 +62,6 @@ DESCRIPTION
 variable "subnets" {
   type = map(object({
     name                            = optional(string)
-    address_prefix                  = optional(string)
     address_prefixes                = optional(list(string))
     default_outbound_access_enabled = optional(bool, false)
     delegate_to                     = optional(string, null)
@@ -107,7 +106,7 @@ variable "subnets" {
   description = <<DESCRIPTION
 The subnets to create in the virtual network, keyed by their name unless `name` is set. Each is created by ./modules/subnet.
 
-- `address_prefixes`                             = (Required) - The address prefixes of the subnet. `address_prefix` is ignored.
+- `address_prefixes`                             = (Required) - The address prefixes of the subnet, as a list.
 - `name`                                         = (Optional) - The name of the subnet. Defaults to its key. A subnet named `AzureBastionSubnet` gets Azure Bastion's rules in a group of its own; `GatewaySubnet` takes no network security group.
 - `default_outbound_access_enabled`              = (Optional) - Whether the subnet has default outbound access. Defaults to false.
 - `delegate_to`                                  = (Optional) - The service to delegate the subnet to, for example `Microsoft.ContainerInstance/containerGroups`.
@@ -121,7 +120,7 @@ The subnets to create in the virtual network, keyed by their name unless `name` 
 - `network_security_group_id`                    = (Optional) - An existing group to associate instead of the shared one. Only read when `create_network_security_group` is false, and not on `AzureBastionSubnet` or `GatewaySubnet`.
 - `no_nsg_association`                           = (Optional) - Skip associating a group with the subnet. A group the subnet asked for is still created. Defaults to false.
 
-Accepted but not used, so setting them does nothing: `address_prefix`, `nat_gateway` (a NAT gateway attaches to every subnet but `GatewaySubnet`), `role_assignments`, `service_endpoint_policies`, `sharing_scope` and `timeouts`.
+Accepted but not used, so setting them does nothing: `nat_gateway` (a NAT gateway attaches to every subnet but `GatewaySubnet`), `role_assignments`, `service_endpoint_policies`, `sharing_scope` and `timeouts`.
 
 Example:
 
@@ -163,10 +162,9 @@ DESCRIPTION
     error_message = "create_network_security_group is not supported on GatewaySubnet: Azure does not support a network security group there, and one can stop the gateway working. Remove it for that subnet."
   }
 
-  # `address_prefix` is kept in the type for compatibility but has never had any effect.
   validation {
     condition     = alltrue([for _, subnet in var.subnets : try(length(subnet.address_prefixes), 0) > 0])
-    error_message = "Each subnet needs at least one entry in `address_prefixes`. The singular `address_prefix` is ignored — azurerm has no such argument — so move its value into `address_prefixes = [...]`."
+    error_message = "Each subnet needs at least one entry in `address_prefixes`. The singular `address_prefix` no longer exists, so move its value into `address_prefixes = [...]`."
   }
 }
 

@@ -185,14 +185,14 @@ run "a_named_nsg_is_created_with_its_rules" {
       name = "node-subnet-nsg"
       security_rules = {
         allow-gateway-in = {
-          priority                   = 100
-          direction                  = "Inbound"
-          access                     = "Allow"
-          protocol                   = "Tcp"
-          source_address_prefix      = "10.233.4.224/27"
-          source_port_range          = "*"
-          destination_address_prefix = "*"
-          destination_port_range     = "443"
+          priority                     = 100
+          direction                    = "Inbound"
+          access                       = "Allow"
+          protocol                     = "Tcp"
+          source_address_prefixes      = ["10.233.4.224/27"]
+          source_port_ranges           = ["*"]
+          destination_address_prefixes = ["*"]
+          destination_port_ranges      = ["443"]
         }
       }
     }
@@ -262,14 +262,14 @@ run "a_group_can_skip_the_default_rules" {
       include_default_rules = false
       security_rules = {
         allow-https = {
-          priority                   = 100
-          direction                  = "Inbound"
-          access                     = "Allow"
-          protocol                   = "Tcp"
-          source_address_prefix      = "*"
-          source_port_range          = "*"
-          destination_address_prefix = "*"
-          destination_port_range     = "443"
+          priority                     = 100
+          direction                    = "Inbound"
+          access                       = "Allow"
+          protocol                     = "Tcp"
+          source_address_prefixes      = ["*"]
+          source_port_ranges           = ["*"]
+          destination_address_prefixes = ["*"]
+          destination_port_ranges      = ["443"]
         }
       }
     }
@@ -297,14 +297,14 @@ run "an_nsg_is_created_without_being_associated" {
       associate = false
       security_rules = {
         allow-gateway-in = {
-          priority                   = 100
-          direction                  = "Inbound"
-          access                     = "Allow"
-          protocol                   = "Tcp"
-          source_address_prefix      = "10.233.4.224/27"
-          source_port_range          = "*"
-          destination_address_prefix = "*"
-          destination_port_range     = "443"
+          priority                     = 100
+          direction                    = "Inbound"
+          access                       = "Allow"
+          protocol                     = "Tcp"
+          source_address_prefixes      = ["10.233.4.224/27"]
+          source_port_ranges           = ["*"]
+          destination_address_prefixes = ["*"]
+          destination_port_ranges      = ["443"]
         }
       }
     }
