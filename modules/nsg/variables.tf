@@ -45,7 +45,12 @@ variable "security_rules" {
   }))
   default     = {}
   nullable    = false
-  description = "Rules specific to this group. A rule is named by `name`, or by its key when `name` is unset, and replaces a default rule of the same name. Ports and addresses are lists only, and all four lists are required. `*` and tags such as `VirtualNetwork` go as the single entry of a list, and several entries must be plain ports, ranges or CIDRs."
+  description = "Rules specific to this group. A rule is named by `name`, or by its key when `name` is unset, and replaces a default rule of the same name. Ports and addresses are lists only, and all four lists are required and not empty. `*` and tags such as `VirtualNetwork` go as the single entry of a list, and several entries must be plain ports, ranges or CIDRs."
+
+  validation {
+    condition     = alltrue([for rule in values(var.security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
+    error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
+  }
 }
 
 variable "include_default_rules" {
@@ -139,6 +144,11 @@ variable "default_rules" {
   `name` is the rule's name in Azure. Passing a map replaces this set rather than extending it, and
   null keeps it. Rules from `security_rules` win over these by name.
   EOT
+
+  validation {
+    condition     = alltrue([for rule in values(var.default_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
+    error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
+  }
 }
 
 variable "azure_bastion_source_ip_prefixes" {
@@ -146,6 +156,11 @@ variable "azure_bastion_source_ip_prefixes" {
   type        = set(string)
   default     = ["0.0.0.0/0"]
   nullable    = false
+
+  validation {
+    condition     = length(var.azure_bastion_source_ip_prefixes) > 0
+    error_message = "azure_bastion_source_ip_prefixes needs at least one entry."
+  }
 }
 
 variable "azure_bastion_security_rules" {
@@ -179,7 +194,7 @@ variable "azure_bastion_security_rules" {
       direction                    = "Inbound"
       priority                     = 4040
       protocol                     = "Tcp"
-      source_address_prefixes      = [] # replaced by azure_bastion_source_ip_prefixes
+      source_address_prefixes      = ["Internet"] # replaced by azure_bastion_source_ip_prefixes
       source_port_ranges           = ["*"]
     },
     "Allow-Https-in-from-GatewayManager" = {
@@ -309,4 +324,9 @@ variable "azure_bastion_security_rules" {
   rather than extending it, and null keeps it. Both `default_rules` and `security_rules` win over
   these by name.
   EOT
+
+  validation {
+    condition     = alltrue([for rule in values(var.azure_bastion_security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
+    error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
+  }
 }

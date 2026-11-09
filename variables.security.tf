@@ -22,7 +22,7 @@ variable "security_rules" {
   default     = {}
   nullable    = false
   description = <<DESCRIPTION
-Rules added to every network security group this module creates, the shared one included, on top of `default_rules`. A rule replaces a default or Bastion rule with the same `name`. The attributes are those of `azurerm_network_security_rule`, minus `resource_group_name` and `network_security_group_name`, which are set for you, and with ports and addresses as lists only: `source_port_ranges`, `destination_port_ranges`, `source_address_prefixes` and `destination_address_prefixes`, all four required. `*` and tags such as `VirtualNetwork` are accepted by Azure only on their own, so give them as the single entry of a list; several entries must be plain ports, ranges or CIDRs. `timeouts` take durations such as `30m`. The key is free-form.
+Rules added to every network security group this module creates, the shared one included, on top of `default_rules`. A rule replaces a default or Bastion rule with the same `name`. The attributes are those of `azurerm_network_security_rule`, minus `resource_group_name` and `network_security_group_name`, which are set for you, and with ports and addresses as lists only: `source_port_ranges`, `destination_port_ranges`, `source_address_prefixes` and `destination_address_prefixes`, all four required and not empty. `*` and tags such as `VirtualNetwork` are accepted by Azure only on their own, so give them as the single entry of a list; several entries must be plain ports, ranges or CIDRs. `timeouts` take durations such as `30m`. The key is free-form.
 
 ```hcl
 security_rules = {
@@ -37,6 +37,11 @@ security_rules = {
     protocol                     = "Tcp"
     source_address_prefixes      = ["VirtualNetwork"]
     source_port_ranges           = ["*"]
+  }
+
+  validation {
+    condition     = alltrue([for rule in values(var.security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
+    error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
   }
 }
 ```
@@ -70,12 +75,22 @@ variable "default_rules" {
     `network_security_group_config.azure_default`. Null keeps the built-in set listed in
     [./modules/nsg](./modules/nsg/variables.tf); a map replaces it. `security_rules` win over these by name.
   EOT
+
+  validation {
+    condition     = var.default_rules == null || alltrue([for rule in values(var.default_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
+    error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
+  }
 }
 
 variable "azure_bastion_source_ip_prefixes" {
   description = "The source IP prefixes that can access the Azure Bastion service over HTTPS. Null allows the whole Internet (`0.0.0.0/0`), so narrow it."
   type        = set(string)
   default     = null
+
+  validation {
+    condition     = var.azure_bastion_source_ip_prefixes == null || length(var.azure_bastion_source_ip_prefixes) > 0
+    error_message = "azure_bastion_source_ip_prefixes needs at least one entry, or null for the default."
+  }
 }
 
 variable "azure_bastion_security_rules" {
@@ -105,4 +120,9 @@ variable "azure_bastion_security_rules" {
     [./modules/nsg](./modules/nsg/variables.tf); a map replaces it. `default_rules` and `security_rules` win over
     these by name.
   EOT
+
+  validation {
+    condition     = var.azure_bastion_security_rules == null || alltrue([for rule in values(var.azure_bastion_security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
+    error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
+  }
 }

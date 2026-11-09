@@ -292,3 +292,78 @@ run "one_entry_goes_to_the_singular_argument_and_more_stay_a_list" {
     error_message = "a list of several entries must reach Azure as the plural argument"
   }
 }
+
+run "reject_an_empty_list_in_default_rules" {
+  command = plan
+
+  module {
+    source = "./modules/nsg"
+  }
+
+  variables {
+    include_default_rules = false
+    default_rules = {
+      bad = {
+        name                         = "bad"
+        access                       = "Allow"
+        direction                    = "Inbound"
+        priority                     = 100
+        protocol                     = "Tcp"
+        source_port_ranges           = []
+        destination_port_ranges      = ["443"]
+        source_address_prefixes      = ["*"]
+        destination_address_prefixes = ["*"]
+      }
+    }
+  }
+
+  expect_failures = [
+    var.default_rules,
+  ]
+}
+
+run "reject_an_empty_list_in_azure_bastion_security_rules" {
+  command = plan
+
+  module {
+    source = "./modules/nsg"
+  }
+
+  variables {
+    include_default_rules = false
+    azure_bastion_security_rules = {
+      bad = {
+        name                         = "bad"
+        access                       = "Allow"
+        direction                    = "Inbound"
+        priority                     = 100
+        protocol                     = "Tcp"
+        source_port_ranges           = []
+        destination_port_ranges      = ["443"]
+        source_address_prefixes      = ["*"]
+        destination_address_prefixes = ["*"]
+      }
+    }
+  }
+
+  expect_failures = [
+    var.azure_bastion_security_rules,
+  ]
+}
+
+run "reject_empty_azure_bastion_source_ip_prefixes" {
+  command = plan
+
+  module {
+    source = "./modules/nsg"
+  }
+
+  variables {
+    include_default_rules            = false
+    azure_bastion_source_ip_prefixes = []
+  }
+
+  expect_failures = [
+    var.azure_bastion_source_ip_prefixes,
+  ]
+}

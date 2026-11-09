@@ -114,6 +114,11 @@ variable "network_security_group" {
     )
     error_message = "network_security_group.associate = false cannot be given alongside id: an id exists only to be associated, so there would be nothing left to do."
   }
+
+  validation {
+    condition     = var.network_security_group == null || alltrue([for rule in values(var.network_security_group.security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
+    error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
+  }
 }
 
 variable "default_rules" {
@@ -132,6 +137,11 @@ variable "azure_bastion_source_ip_prefixes" {
   type        = set(string)
   default     = null
   description = "Source prefixes allowed by the Bastion Internet rule of a group created here. Null keeps the built-in default, which allows the whole Internet."
+
+  validation {
+    condition     = var.azure_bastion_source_ip_prefixes == null || length(var.azure_bastion_source_ip_prefixes) > 0
+    error_message = "azure_bastion_source_ip_prefixes needs at least one entry, or null for the default."
+  }
 }
 
 variable "route_table_id" {
