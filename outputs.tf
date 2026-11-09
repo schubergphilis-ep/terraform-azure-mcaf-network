@@ -38,7 +38,7 @@ output "all_subnets" {
 }
 
 output "all_network_security_groups" {
-  description = "A map of all network security groups created keyed by subnet"
+  description = "The network security groups created for individual subnets, keyed by subnet key. The shared group is not in it."
   value = {
     for key, subnet in module.subnet : key => {
       name     = subnet.network_security_group_name
@@ -49,13 +49,16 @@ output "all_network_security_groups" {
 }
 
 output "subnets_with_nsg" {
-  value = local.subnets_with_nsg
+  description = "The subnets that asked for a network security group of their own."
+  value       = local.subnets_with_nsg
 }
 
 output "subnets_with_nsg_azure_default" {
-  value = local.subnets_with_nsg_azure_default
+  description = "The subnets whose own group keeps only Azure's default rules plus `security_rules`."
+  value       = local.subnets_with_nsg_azure_default
 }
 
 output "subnets_with_default_nsg" {
-  value = local.default_subnets
+  description = "The subnets that use the shared group, or an existing one, unless `no_nsg_association` is set."
+  value       = local.default_subnets
 }

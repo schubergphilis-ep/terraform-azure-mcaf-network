@@ -1,21 +1,23 @@
 locals {
-  # Subnet selections
+  # Azure decides by name what a subnet is, and the name defaults to the key.
+  subnet_names = { for k, v in var.subnets : k => coalesce(v.name, k) }
+
+  # Subnet selections. A GatewaySubnet cannot ask for a group of its own: variables.tf rejects it.
   default_subnets = {
     for k, v in var.subnets :
     k => v if(
       !v.create_network_security_group &&
-      k != "AzureBastionSubnet" &&
-      k != "GatewaySubnet"
+      !contains(["AzureBastionSubnet", "GatewaySubnet"], local.subnet_names[k])
     )
   }
-  azure_bastion_subnet = { for k, v in var.subnets : k => v if k == "AzureBastionSubnet" }
+  azure_bastion_subnet = { for k, v in var.subnets : k => v if local.subnet_names[k] == "AzureBastionSubnet" }
 
   subnets_with_nsg = {
     for k, v in var.subnets :
     k => v if(
       v.create_network_security_group &&
-      v.network_security_group_config == null &&
-      k != "AzureBastionSubnet"
+      !try(v.network_security_group_config.azure_default, false) &&
+      local.subnet_names[k] != "AzureBastionSubnet"
     )
   }
 
@@ -24,7 +26,7 @@ locals {
     k => v if(
       v.create_network_security_group &&
       try(v.network_security_group_config.azure_default, false) &&
-      k != "AzureBastionSubnet"
+      local.subnet_names[k] != "AzureBastionSubnet"
     )
   }
 

@@ -37,6 +37,16 @@ Root module outputs keep their names and shape: `subnets`, `all_subnets` and `al
 > [!IMPORTANT]
 > This module cannot ship the `moved` blocks for the subnets and their per-subnet groups. A `moved` block takes literal addresses, so it cannot be generated with `for_each`, and the subnet keys are yours. The one keyless block the module could ship, from `azurerm_subnet.this` to `module.subnet`, targets an address that does not exist once `module.subnet` has a `for_each`. Terraform accepts it without an error and plans to destroy and recreate every subnet and everything attached to them.
 
+### Other behaviour changes
+
+Each of these fixes a bug, and each changes what an existing configuration plans. Check them against yours before applying.
+
+- **`create_network_security_group = true` with `network_security_group_config = { azure_default = false }`** (or `{}`) used to give the subnet no group at all, not even the shared one. It now gets a group of its own with the default rules, and is associated. Those rules deny all other traffic, so check what the subnet relies on first.
+- **`create_network_security_group = true` on `GatewaySubnet`** now fails at plan: Azure does not support a group there, and one can stop the gateway working. Remove it, and the first apply destroys the group and its association.
+- **`AzureBastionSubnet` and `GatewaySubnet` are recognised by the subnet's name**, which defaults to its key, instead of by the key alone. It only differs when `name` is one of them under another key: that subnet now gets Bastion's own group, or no NAT gateway.
+- **`natgateway.public_ip_address_id`** now means no public IP is created. Until now `public_ip` still created one beside it, unused, unless you set `public_ip = null`. If you had both, the first apply destroys that unused public IP.
+- **`private_dns` with `zone_link_enabled = false`** is now honoured. It was ignored, so the link was always created. The first apply destroys the link and keeps the zone.
+
 ### How to upgrade v3.0.0
 
 1. Upgrade from `v2.x`. If you are on `v1.x`, upgrade to `v2.0.0` first: it moves the module to `azurerm` v5 and is a separate step from this one.
@@ -95,6 +105,6 @@ Root module outputs keep their names and shape: `subnets`, `all_subnets` and `al
    }
    ```
 
-8. Run `terraform plan` and confirm it reports `0 to add` and `0 to destroy`. The only changes should be in-place: the shared group's rules gain their `description`, and the `Resource Type` tag goes away. Anything else means a block is missing or a key is wrong — do not apply until the plan matches.
+8. Run `terraform plan` and confirm it reports `0 to add` and `0 to destroy`, apart from what the warnings and *Other behaviour changes* above describe: the route table associations `route_table` now creates, and the groups, public IP and DNS link that come or go. The only other changes should be in-place: the shared group's rules gain their `description`, and the `Resource Type` tag goes away. Anything else means a block is missing or a key is wrong — do not apply until the plan matches.
 
 9. Apply, then drop the `moved` blocks once every consumer has upgraded.

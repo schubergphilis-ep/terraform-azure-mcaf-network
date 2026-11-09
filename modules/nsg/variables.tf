@@ -85,10 +85,10 @@ variable "default_rules" {
     source_port_range                          = optional(string, null)
     source_port_ranges                         = optional(set(string), null)
     timeouts = optional(object({
-      create = optional(string, "30")
-      delete = optional(string, "30")
-      read   = optional(string, "5")
-      update = optional(string, "30")
+      create = optional(string, "30m")
+      delete = optional(string, "30m")
+      read   = optional(string, "5m")
+      update = optional(string, "30m")
     }))
   }))
   default = {
@@ -175,10 +175,10 @@ variable "azure_bastion_security_rules" {
     source_port_range                          = optional(string, null)
     source_port_ranges                         = optional(set(string), null)
     timeouts = optional(object({
-      create = optional(string, "30")
-      delete = optional(string, "30")
-      read   = optional(string, "5")
-      update = optional(string, "30")
+      create = optional(string, "30m")
+      delete = optional(string, "30m")
+      read   = optional(string, "5m")
+      update = optional(string, "30m")
     }))
   }))
   default = {

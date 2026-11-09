@@ -1,12 +1,12 @@
 variable "resource_group_name" {
   type        = string
-  description = "Name of the resource group to Create the Storage account in"
+  description = "Name of the resource group to create the virtual network in."
   nullable    = false
 }
 
 variable "location" {
   type        = string
-  description = "Location of the Storage account"
+  description = "Location of the virtual network."
   nullable    = false
 }
 
@@ -30,28 +30,32 @@ variable "natgateway" {
   default     = null
   nullable    = true
   description = <<DESCRIPTION
-This object describes the public IP configuration when creating Nat Gateway's with a public IP.  If creating more than one public IP, then these values will be used for all public IPs.
+Creates a NAT gateway and attaches it to every subnet except GatewaySubnet. Leave null for none.
 
-- `allocation_method`       = (Required) - Defines the allocation method for this IP address. Possible values are Static or Dynamic.
-- `ddos_protection_mode`    = (Optional) - The DDoS protection mode of the public IP. Possible values are Disabled, Enabled, and VirtualNetworkInherited. Defaults to VirtualNetworkInherited.
-- `ddos_protection_plan_id` = (Optional) - The ID of DDoS protection plan associated with the public IP. ddos_protection_plan_id can only be set when ddos_protection_mode is Enabled
-- `domain_name_label`       = (Optional) - Label for the Domain Name. Will be used to make up the FQDN. If a domain name label is specified, an A DNS record is created for the public IP in the Microsoft Azure DNS system.
-- `idle_timeout_in_minutes` = (Optional) - Specifies the timeout for the TCP idle connection. The value can be set between 4 and 30 minutes.
-- `inherit_tags`            = (Optional) - Defaults to false. Set this to false if only the tags defined on this resource should be applied. - Future functionality leaving in.
-- `ip_version`              = (Optional) - The IP Version to use, IPv6 or IPv4. Changing this forces a new resource to be created. Only static IP address allocation is supported for IPv6.
-- `lock_level`              = (Optional) - Set this value to override the resource level lock value.  Possible values are `None`, `CanNotDelete`, and `ReadOnly`.
-- `name`                    = (Optional) - The name of the Nat gateway. Changing this forces a new resource to be created.
-- `sku`                     = (Optional) - The SKU of the Public IP. Accepted values are Basic and Standard. Defaults to Standard to support zones by default. Changing this forces a new resource to be created. When sku_tier is set to Global, sku must be set to Standard.
-- `sku_tier`                = (Optional) - The SKU tier of the Public IP. Accepted values are Global and Regional. Defaults to Regional
-- `zones`                   = (Optional) - A list of zones where this public IP should be deployed. Defaults to no zone. if you prefer, you can set other values for the zones ["1","2","3"]. Changing this forces a new resource to be created.
+- `name`                 = (Required) - The name of the NAT gateway. Changing this forces a new resource to be created.
+- `sku`                  = (Optional) - The SKU of the NAT gateway. Defaults to Standard.
+- `zones`                = (Optional) - The zones of the NAT gateway, and of the public IP unless `public_ip.zones` is set. Changing this forces a new resource to be created.
+- `public_ip_address_id` = (Optional) - An existing public IP to attach. When set, no public IP is created and `public_ip` is not used.
 
-  Example Inputs:
+Accepted but not used: `allocation_method`, `ddos_protection_mode`, `ddos_protection_plan_id`, `domain_name_label`, `idle_timeout_in_minutes`, `inherit_tags`, `ip_address_resource_id`, `ip_version`, `lock_level` and `sku_tier`. Configure the created public IP through `public_ip`.
 
-  ```hcl
-  natgateway = {
-    name = "my-nat-gw"
+Example:
+
+```hcl
+natgateway = {
+  name = "my-nat-gw"
+
+  validation {
+    condition     = var.natgateway == null || var.natgateway.name != null
+    error_message = "natgateway.name is required: Azure needs a name for the NAT gateway."
   }
-  ```hcl
+
+  validation {
+    condition     = var.natgateway == null || var.natgateway.public_ip_address_id != null || var.public_ip != null
+    error_message = "A NAT gateway needs a public IP: set natgateway.public_ip_address_id, or leave public_ip set so one is created."
+  }
+}
+```
 DESCRIPTION
 }
 
@@ -101,30 +105,25 @@ variable "subnets" {
   }))
   default     = {}
   description = <<DESCRIPTION
-This object describes the subnets to create within the virtual network.
+The subnets to create in the virtual network, keyed by their name unless `name` is set. Each is created by ./modules/subnet.
 
-- `address_prefix`   = (Optional) - The address prefix to use for the subnet. Changing this forces a new resource to be created.
-- `address_prefixes` = (Optional) - The address prefixes to use for the subnet. Changing this forces a new resource to be created.
-- `name`             = (Optional) - The name of the subnet. Changing this forces a new resource to be created.
-- `create_network_security_group` = (Optional) - Whether to create a specific Network Security Group for the subnet. Defaults to false.
-- `network_security_group_config` = (Optional) - The configuration for the Network Security Group. Changing this forces a new resource to be created.
-  `azure_default` = (Optional) - Whether to use the Azure default Network Security Group rules. Defaults to false.
-- `network_security_group_id` = (Optional) - The ID of the Network Security Group to associate with the subnet. Changing this forces a new resource to be created.
-- `no_nsg_association` = (Optional) - Whether to associate a Network Security Group with the subnet. Defaults to false.
-- `nat_gateway`      = (Optional) - The NAT Gateway to associate with the subnet. Changing this forces a new resource to be created.
-- `network_security_group` = (Optional) - The Network Security Group to associate with the subnet. Changing this forces a new resource to be created.
-- `private_endpoint_network_policies` = (Optional) - Enable or Disable network policies for the private endpoint on the subnet. Possible values are Disabled, Enabled, NetworkSecurityGroupEnabled and RouteTableEnabled. Defaults to Disabled.
-- `private_link_service_network_policies_enabled` = (Optional) - Enable or disable network policies for private link service on the subnet. Defaults to true.
-- `route_table` = (Optional) - The Route Table to associate with the subnet. Changing this forces a new resource to be created.
-- `service_endpoint_policies` = (Optional) - The service endpoint policies to associate with the subnet. Changing this forces a new resource to be created.
-- `service_endpoints` = (Optional) - The service endpoints to associate with the subnet. Changing this forces a new resource to be created.
-- `default_outbound_access_enabled` = (Optional) - Whether to allow outbound traffic from the subnet. Defaults to false.
-- `sharing_scope` = (Optional) - The sharing scope of the subnet. Possible values are None, Shared, and Service. Defaults to None.
-- `delegate_to` = (Optional) - The service to delegate to. Changing this forces a new resource to be created.
-- `timeouts` = (Optional) - The timeouts for the subnet.
-- `role_assignments` = (Optional) - The role assignments for the subnet.
+- `address_prefixes`                             = (Required) - The address prefixes of the subnet. `address_prefix` is ignored.
+- `name`                                         = (Optional) - The name of the subnet. Defaults to its key. A subnet named `AzureBastionSubnet` gets Azure Bastion's rules in a group of its own; `GatewaySubnet` takes no network security group.
+- `default_outbound_access_enabled`              = (Optional) - Whether the subnet has default outbound access. Defaults to false.
+- `delegate_to`                                  = (Optional) - The service to delegate the subnet to, for example `Microsoft.ContainerInstance/containerGroups`.
+- `delegate_to_actions`                          = (Optional) - The delegation's actions. Defaults to the entry for `delegate_to` in `subnet_delegations_actions`.
+- `private_endpoint_network_policies`            = (Optional) - Possible values are Disabled, Enabled, NetworkSecurityGroupEnabled and RouteTableEnabled. Defaults to Disabled.
+- `private_link_service_network_policies_enabled` = (Optional) - Whether network policies apply to private link service on the subnet. Defaults to true.
+- `route_table`                                  = (Optional) - The route table to associate, as `{ id = "..." }`. Not allowed on `AzureBastionSubnet`.
+- `service_endpoints`                            = (Optional) - The service endpoints of the subnet.
+- `create_network_security_group`                = (Optional) - Whether the subnet gets a group of its own, with the default rules plus `security_rules`. Without it the subnet is associated with the group shared by all subnets. Not allowed on `GatewaySubnet`. Defaults to false.
+- `network_security_group_config`                = (Optional) - Only read with `create_network_security_group`. `azure_default = true` keeps just Azure's own default rules plus `security_rules`, and always associates.
+- `network_security_group_id`                    = (Optional) - An existing group to associate instead of the shared one. Only read when `create_network_security_group` is false, and not on `AzureBastionSubnet` or `GatewaySubnet`.
+- `no_nsg_association`                           = (Optional) - Skip associating a group with the subnet. A group the subnet asked for is still created. Defaults to false.
 
-  Example Inputs:
+Accepted but not used, so setting them does nothing: `address_prefix`, `nat_gateway` (a NAT gateway attaches to every subnet but `GatewaySubnet`), `role_assignments`, `service_endpoint_policies`, `sharing_scope` and `timeouts`.
+
+Example:
 
 ```hcl
 subnets = {
@@ -156,10 +155,13 @@ subnets = {
     default_outbound_access_enabled = false
   }
 }
-```hcl
-
-
+```
 DESCRIPTION
+
+  validation {
+    condition     = alltrue([for k, subnet in var.subnets : !(coalesce(subnet.name, k) == "GatewaySubnet" && subnet.create_network_security_group)])
+    error_message = "create_network_security_group is not supported on GatewaySubnet: Azure does not support a network security group there, and one can stop the gateway working. Remove it for that subnet."
+  }
 
   # `address_prefix` is kept in the type for compatibility but has never had any effect.
   validation {
@@ -169,7 +171,7 @@ DESCRIPTION
 }
 
 variable "tags" {
-  description = "A map of tags to assign to the resource."
+  description = "A map of tags to assign to every resource this module creates."
   type        = map(string)
   default     = {}
 }
@@ -200,14 +202,14 @@ variable "private_dns" {
   }))
   default     = null
   description = <<DESCRIPTION
-This object describes the private DNS configuration for the virtual network.
+This object describes the private DNS zones to create, and to link to the virtual network.
 
 - `zone_name`           = (Required) - The name of the private DNS zone.
 - `zone_link_enabled`   = (Optional) - Whether to link the private DNS zone to the virtual network. Defaults to true.
-- `zone_link_name`      = (Optional) - The name of the private DNS zone link. Changing this forces a new resource to be created.
-- `resource_group_name` = (Optional) - The name of the resource group to link the private DNS zone to. Changing this forces a new resource to be created.
+- `zone_link_name`      = (Optional) - The name of the link. Defaults to `<key>_link`. Changing this forces a new resource to be created.
+- `resource_group_name` = (Optional) - The resource group to create the zone in. Defaults to the virtual network's. Changing this forces a new resource to be created.
 
-  Example Inputs:
+Example:
 
 ```hcl
 private_dns = {
@@ -221,8 +223,7 @@ private_dns = {
     zone_name = "privatelink.azurecr.io"
   }
 }
-```hcl
-
+```
 DESCRIPTION
 }
 
@@ -238,105 +239,19 @@ variable "public_ip" {
   default     = {}
   nullable    = true
   description = <<DESCRIPTION
-This object describes the public IP configuration when creating a public IP.
-Its is preconfigured by the Nat Gateway.
+The public IP created for the NAT gateway. Not used when `natgateway.public_ip_address_id` is set, and set to null it creates none.
 
 - `allocation_method` = (Optional) - Defines the allocation method for this IP address. Possible values are Static or Dynamic, default is Static.
 - `ip_version`        = (Optional) - The IP Version to use, IPv6 or IPv4. Changing this forces a new resource to be created. Only static IP address allocation is supported for IPv6, Default is IPv4.
-- `name`              = (Optional) - The name of the Public IP. Changing this forces a new resource to be created.
+- `name`              = (Optional) - The name of the Public IP. Defaults to `<natgateway.name>-pip`. Changing this forces a new resource to be created.
 - `sku`               = (Optional) - The SKU of the Public IP. Accepted values are Basic and Standard. Defaults to Standard. Changing this forces a new resource to be created.
 - `sku_tier`          = (Optional) - The SKU Tier that should be used for the Public IP. Possible values are Regional and Global. Defaults to Regional. Changing this forces a new resource to be created.
-- `zones`             = (Optional) - A collection containing the availability zone to allocate the Public IP in. Changing this forces a new resource to be created, Availability Zones are only supported with a Standard SKU and in select regions at this time. Standard SKU Public IP Addresses that do not specify a zone are not zone-redundant by default.
-}
-
+- `zones`             = (Optional) - The availability zones to allocate the Public IP in. Defaults to the NAT gateway's `zones`. Changing this forces a new resource to be created. Availability Zones are only supported with a Standard SKU and in select regions.
 DESCRIPTION
 }
 
 variable "subnet_delegations_actions" {
-  type = map(list(string))
-  default = {
-    "GitHub.Network/networkSettings"         = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.ApiManagement/service"        = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.App/environments"             = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    "Microsoft.App/testClients"              = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Apollo/npu"                   = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.AVS/PrivateClouds"            = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.AzureCosmosDB/clusters"       = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.BareMetal/AzureHPC"           = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.BareMetal/AzureHostedService" = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.BareMetal/AzurePaymentHSM"    = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.BareMetal/AzureVMware" = [
-      "Microsoft.Network/networkinterfaces/*", "Microsoft.Network/virtualNetworks/subnets/join/action"
-    ]
-    "Microsoft.BareMetal/CrayServers" = [
-      "Microsoft.Network/networkinterfaces/*", "Microsoft.Network/virtualNetworks/subnets/join/action"
-    ]
-    "Microsoft.BareMetal/MonitoringServers"       = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Batch/batchAccounts"               = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.CloudTest/hostedpools"             = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.CloudTest/images"                  = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.CloudTest/pools"                   = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Codespaces/plans"                  = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.ContainerInstance/containerGroups" = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.ContainerService/managedClusters"  = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.ContainerService/TestClients"      = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Databricks/workspaces" = [
-      "Microsoft.Network/virtualNetworks/subnets/join/action",
-      "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action",
-      "Microsoft.Network/virtualNetworks/subnets/unprepareNetworkPolicies/action"
-    ]
-    "Microsoft.DBforMySQL/flexibleServers"      = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.DBforMySQL/servers"              = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.DBforMySQL/serversv2"            = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.DBforPostgreSQL/flexibleServers" = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.DBforPostgreSQL/serversv2"       = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    "Microsoft.DBforPostgreSQL/singleServers"   = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.DelegatedNetwork/controller"     = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.DevCenter/networkConnection"     = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.DevOpsInfrastructure/pools"      = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    "Microsoft.DocumentDB/cassandraClusters"    = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Fidalgo/networkSettings"         = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.HardwareSecurityModules/dedicatedHSMs" = [
-      "Microsoft.Network/networkinterfaces/*", "Microsoft.Network/virtualNetworks/subnets/join/action"
-    ]
-    "Microsoft.Kusto/clusters"                       = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.LabServices/labplans"                 = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Logic/integrationServiceEnvironments" = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.MachineLearningServices/workspaces"   = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Netapp/volumes" = [
-      "Microsoft.Network/networkinterfaces/*", "Microsoft.Network/virtualNetworks/subnets/join/action"
-    ]
-    "Microsoft.Network/applicationGateways"          = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    "Microsoft.Network/dnsResolvers"                 = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    "Microsoft.Network/fpgaNetworkInterfaces"        = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Network/managedResolvers"             = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Network/networkWatchers."             = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Network/virtualNetworkGateways"       = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Orbital/orbitalGateways"              = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.PowerPlatform/enterprisePolicies"     = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.PowerPlatform/vnetaccesslinks"        = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.ServiceFabricMesh/networks"           = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.ServiceNetworking/trafficControllers" = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Singularity/accounts/networks"        = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Singularity/accounts/npu"             = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Sql/managedInstances" = [
-      "Microsoft.Network/virtualNetworks/subnets/join/action",
-      "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action",
-      "Microsoft.Network/virtualNetworks/subnets/unprepareNetworkPolicies/action"
-    ]
-    "Microsoft.Sql/managedInstancesOnebox"    = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Sql/managedInstancesStage"     = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Sql/managedInstancesTest"      = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Sql/servers"                   = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.StoragePool/diskPools"         = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.StreamAnalytics/streamingJobs" = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    "Microsoft.Synapse/workspaces"            = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Web/hostingEnvironments"       = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Microsoft.Web/serverFarms"               = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "NGINX.NGINXPLUS/nginxDeployments"        = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "PaloAltoNetworks.Cloudngfw/firewalls"    = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    "Qumulo.Storage/fileSystems"              = ["Microsoft.Network/virtualNetworks/subnets/action"]
-  }
-  description = "List of delegation actions when delegations of subnets is used, will be used for querying"
-
+  type        = map(list(string))
+  default     = null
+  description = "Maps a delegation service name to its actions. Null keeps the built-in table in ./modules/subnet; a map replaces it. Used when a subnet sets `delegate_to` without `delegate_to_actions`."
 }

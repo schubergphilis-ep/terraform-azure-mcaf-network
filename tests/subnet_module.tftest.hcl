@@ -86,6 +86,25 @@ run "delegation_actions_come_from_the_lookup_table" {
   }
 }
 
+run "network_watchers_delegation_actions_are_found_under_the_dotted_name" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "WatcherSubnet"
+    address_prefixes = ["100.0.6.0/24"]
+    delegate_to      = "Microsoft.Network/networkWatchers."
+  }
+
+  assert {
+    condition     = azurerm_subnet.this.delegation[0].service_delegation[0].actions == toset(["Microsoft.Network/virtualNetworks/subnets/action"])
+    error_message = "azurerm names this delegation with a trailing dot, so the table key must carry it or the actions are never found"
+  }
+}
+
 run "explicit_delegation_actions_win" {
   command = plan
 

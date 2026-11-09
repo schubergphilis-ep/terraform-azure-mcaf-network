@@ -265,6 +265,7 @@ variable "subnet_delegations_actions" {
     "PaloAltoNetworks.Cloudngfw/firewalls"    = ["Microsoft.Network/virtualNetworks/subnets/action"]
     "Qumulo.Storage/fileSystems"              = ["Microsoft.Network/virtualNetworks/subnets/action"]
   }
-  description = "List of delegation actions when delegations of subnets is used, will be used for querying"
+  nullable    = false
+  description = "Maps a delegation service name to its actions, used when `delegate_to` is set without `delegate_to_actions`. Passing null keeps this built-in table; a map replaces it."
 
 }

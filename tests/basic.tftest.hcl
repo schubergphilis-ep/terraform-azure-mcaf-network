@@ -180,3 +180,110 @@ run "no_nsg_association_still_creates_the_nsg" {
     error_message = "a subnet that never asked for a group of its own should not get one"
   }
 }
+
+run "azure_default_false_still_gets_its_own_group" {
+  command = plan
+
+  variables {
+    subnets = {
+      "OwnSubnet" = {
+        address_prefixes              = ["100.0.7.0/24"]
+        create_network_security_group = true
+        network_security_group_config = { azure_default = false }
+      }
+    }
+  }
+
+  assert {
+    condition     = output.all_network_security_groups["OwnSubnet"].name == "my-vnet-ownsubnet-nsg"
+    error_message = "create_network_security_group means a group of its own, whatever else network_security_group_config says"
+  }
+}
+
+run "reject_a_network_security_group_on_the_gateway_subnet" {
+  command = plan
+
+  variables {
+    subnets = {
+      "GatewaySubnet" = {
+        address_prefixes              = ["100.0.8.0/27"]
+        create_network_security_group = true
+      }
+    }
+  }
+
+  expect_failures = [
+    var.subnets,
+  ]
+}
+
+run "bastion_is_recognised_by_name_not_key" {
+  command = plan
+
+  variables {
+    subnets = {
+      "bastion" = {
+        name             = "AzureBastionSubnet"
+        address_prefixes = ["100.0.4.0/26"]
+      }
+    }
+  }
+
+  assert {
+    condition     = output.all_network_security_groups["bastion"].name == "my-vnet-bastion-nsg"
+    error_message = "a subnet named AzureBastionSubnet needs Bastion's own group, whatever key it has"
+  }
+}
+
+run "the_gateway_subnet_is_recognised_by_name_for_the_nat_gateway" {
+  command = plan
+
+  variables {
+    subnets = {
+      "gw" = {
+        name             = "GatewaySubnet"
+        address_prefixes = ["100.0.8.0/27"]
+      }
+      "core" = {
+        address_prefixes = ["100.0.1.0/24"]
+      }
+    }
+  }
+
+  assert {
+    condition     = keys(azurerm_subnet_nat_gateway_association.this) == ["core"]
+    error_message = "a NAT gateway attaches to every subnet but the one named GatewaySubnet"
+  }
+}
+
+run "a_supplied_public_ip_id_creates_no_public_ip" {
+  command = plan
+
+  variables {
+    natgateway = {
+      name                 = "my-nat-gw"
+      public_ip_address_id = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/publicIPAddresses/mine"
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_public_ip.this) == 0
+    error_message = "the public IP passed in is the one used, so none should be created beside it"
+  }
+}
+
+run "a_zone_without_a_link_is_still_created" {
+  command = plan
+
+  variables {
+    private_dns = {
+      "kv"   = { zone_name = "privatelink.vaultcore.azure.net", zone_link_enabled = false }
+      "blob" = { zone_name = "privatelink.blob.core.windows.net" }
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_private_dns_zone.this) == 2 && keys(azurerm_private_dns_zone_virtual_network_link.this) == ["blob"]
+    error_message = "zone_link_enabled = false should skip only the link"
+  }
+}
