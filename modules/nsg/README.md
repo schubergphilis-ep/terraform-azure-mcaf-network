@@ -43,6 +43,7 @@ No modules.
 | Name | Description |
 | ---- | ----------- |
 | <a name="output_id"></a> [id](#output\_id) | The ID of the network security group. Only available once its rules exist, so attaching it never exposes a group carrying just Azure's defaults. |
+| <a name="output_location"></a> [location](#output\_location) | The Azure region of the network security group, as Azure reports it. |
 | <a name="output_name"></a> [name](#output\_name) | The name of the network security group. |
 | <a name="output_resource_group_name"></a> [resource\_group\_name](#output\_resource\_group\_name) | The resource group of the network security group and its rules. |
 | <a name="output_rule_names"></a> [rule\_names](#output\_rule\_names) | The names of the rules on the group, after default, Bastion and custom rules are merged. |

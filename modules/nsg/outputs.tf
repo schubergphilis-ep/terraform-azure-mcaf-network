@@ -19,3 +19,8 @@ output "rule_names" {
   description = "The names of the rules on the group, after default, Bastion and custom rules are merged."
   value       = keys(local.rules)
 }
+
+output "location" {
+  description = "The Azure region of the network security group, as Azure reports it."
+  value       = azurerm_network_security_group.this.location
+}

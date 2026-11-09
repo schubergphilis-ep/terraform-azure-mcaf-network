@@ -13,15 +13,24 @@ Subnets, and every per-subnet network security group, moved out of the root modu
 | Subnet | `azurerm_subnet.this["<key>"]` | `module.subnet["<key>"].azurerm_subnet.this` |
 | Group association | `azurerm_subnet_network_security_group_association.<this\|simple\|additional\|azbastion>["<key>"]` | `module.subnet["<key>"].azurerm_subnet_network_security_group_association.this[0]` |
 | Per-subnet group | `azurerm_network_security_group.<simple\|additional\|azbastion>["<key>"]` | `module.subnet["<key>"].module.nsg[0].azurerm_network_security_group.this` |
-| Per-subnet rule | `azurerm_network_security_rule.<simple\|additional\|azbastion>["<subnet>_<priority>_<access>_<direction>"]` | `module.subnet["<key>"].module.nsg[0].azurerm_network_security_rule.this["<rule name>"]` |
+| Per-subnet rule | `azurerm_network_security_rule.<simple\|additional\|azbastion>["<subnet>_<priority>_<access>_<direction>"]` (the whole key is lower-cased) | `module.subnet["<key>"].module.nsg[0].azurerm_network_security_rule.this["<rule name>"]` |
 
 `azurerm_network_security_group.this` and `azurerm_network_security_rule.default[...]` are the shared group and its rules. They move to `module.nsg` by themselves. The `<rule name>` is the rule's name in Azure, so no rule is renamed.
 
+One exception: if a key in `default_rules` or `azure_bastion_security_rules` differs from its `name`, `v2.x` named the per-subnet copies after the key and the shared ones after `name`. The per-subnet copies are then renamed, which replaces them, and the shared rules need one more block, because rules are now keyed by name:
+
+```hcl
+moved {
+  from = module.network.module.nsg.azurerm_network_security_rule.this["<key>"]
+  to   = module.network.module.nsg.azurerm_network_security_rule.this["<name>"]
+}
+```
+
 `AzureBastionSubnet` moves like every other subnet. The submodule creates the rules before it attaches the group, so the group never sits on the subnet carrying only Azure's default rules.
 
-`address_prefixes` is now enforced on each subnet. The singular `address_prefix` is still accepted but ignored, as it always was: `azurerm` removed the argument and no resource read it. A subnet that only sets it now fails validation.
+`address_prefixes` is now checked on each subnet by this module. The singular `address_prefix` is still accepted but ignored, as it always was: `azurerm` removed the argument and no resource read it, so a subnet that only sets it already failed at plan. It now fails with a clearer message.
 
-The provider requirement does not change: `v2.0.0` already moved the module to `azurerm` v5.
+The minimum stays `azurerm` v5, which `v2.0.0` already required. The constraint is widened from `~> 5` to `>= 5`.
 
 The `Resource Type` tag is no longer added to the virtual network, NAT gateway, public IP or network security groups, so the first apply removes it from them: an in-place update. If something depends on it, put a tag of your own in `tags`.
 
@@ -35,15 +44,15 @@ Which group a subnet gets, and whether it is associated, does not change. `no_ns
 Root module outputs keep their names and shape: `subnets`, `all_subnets` and `all_network_security_groups`.
 
 > [!IMPORTANT]
-> This module cannot ship the `moved` blocks for the subnets and their per-subnet groups. A `moved` block takes literal addresses, so it cannot be generated with `for_each`, and the subnet keys are yours. The one keyless block the module could ship, from `azurerm_subnet.this` to `module.subnet`, targets an address that does not exist once `module.subnet` has a `for_each`. Terraform accepts it without an error and plans to destroy and recreate every subnet and everything attached to them.
+> This module cannot ship the `moved` blocks for the subnets and their per-subnet groups. A `moved` block takes literal addresses, so it cannot be generated with `for_each`, and the subnet keys are yours. The one keyless block the module could ship, from `azurerm_subnet.this` to `module.subnet.azurerm_subnet.this`, targets an address that does not exist once `module.subnet` has a `for_each`. Terraform accepts it without an error and plans to destroy and recreate every subnet and everything attached to them.
 
 ### Other behaviour changes
 
 Each of these fixes a bug, and each changes what an existing configuration plans. Check them against yours before applying.
 
 - **`create_network_security_group = true` with `network_security_group_config = { azure_default = false }`** (or `{}`) used to give the subnet no group at all, not even the shared one. It now gets a group of its own with the default rules, and is associated. Those rules deny all other traffic, so check what the subnet relies on first.
-- **`create_network_security_group = true` on `GatewaySubnet`** now fails at plan: Azure does not support a group there, and one can stop the gateway working. Remove it, and the first apply destroys the group and its association.
-- **`AzureBastionSubnet` and `GatewaySubnet` are recognised by the subnet's name**, which defaults to its key, instead of by the key alone. It only differs when `name` is one of them under another key: that subnet now gets Bastion's own group, or no NAT gateway.
+- **`create_network_security_group = true` on `GatewaySubnet`** now fails at plan: Azure does not support a group there, and one can stop the gateway working. Remove it, and the first apply destroys the group, its rules and its association.
+- **`AzureBastionSubnet` and `GatewaySubnet` are recognised by the subnet's name**, which defaults to its key, instead of by the key alone. It only differs when `name` is one of them under another key: a subnet named `AzureBastionSubnet` now gets Bastion's own group, which replaces its association, and a subnet named `GatewaySubnet` now gets no NAT gateway and no group association. The first apply destroys what no longer applies.
 - **`natgateway.public_ip_address_id`** now means no public IP is created. Until now `public_ip` still created one beside it, unused, unless you set `public_ip = null`. If you had both, the first apply destroys that unused public IP.
 - **`private_dns` with `zone_link_enabled = false`** is now honoured. It was ignored, so the link was always created. The first apply destroys the link and keeps the zone.
 
@@ -96,7 +105,7 @@ Each of these fixes a bug, and each changes what an existing configuration plans
 
    `azurerm_network_security_group.this` is not in this list. The group shared by every subnet that does not ask for its own is moved by the module.
 
-7. Add a block per rule on those groups. **The key changes**: the root keyed rules `<subnet>_<priority>_<access>_<direction>`, the NSG module keys them by rule name, so the target is not a copy of the source:
+7. Add a block per rule on those groups. **The key changes**: the root keyed rules by the lower-cased `<subnet>_<priority>_<access>_<direction>`, the NSG module keys them by rule name, which `terraform state show` prints, so the target is not a copy of the source:
 
    ```hcl
    moved {

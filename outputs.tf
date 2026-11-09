@@ -43,7 +43,7 @@ output "all_network_security_groups" {
     for key, subnet in module.subnet : key => {
       name     = subnet.network_security_group_name
       id       = subnet.network_security_group_id
-      location = var.location
+      location = subnet.network_security_group_location
     } if subnet.network_security_group_name != null
   }
 }

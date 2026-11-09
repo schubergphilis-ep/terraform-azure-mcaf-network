@@ -57,5 +57,6 @@
 | <a name="output_id"></a> [id](#output\_id) | The ID of the subnet. |
 | <a name="output_name"></a> [name](#output\_name) | The name of the subnet. |
 | <a name="output_network_security_group_id"></a> [network\_security\_group\_id](#output\_network\_security\_group\_id) | The ID of the network security group, whether this module created it or the caller passed it in. Created groups are listed even when associate is false. |
+| <a name="output_network_security_group_location"></a> [network\_security\_group\_location](#output\_network\_security\_group\_location) | Region of the group this module created, or null when it associated one it does not own. |
 | <a name="output_network_security_group_name"></a> [network\_security\_group\_name](#output\_network\_security\_group\_name) | Name of the group this module created, or null when it associated one it does not own. |
 <!-- END_TF_DOCS -->
