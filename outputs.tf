@@ -59,6 +59,6 @@ output "subnets_with_nsg_azure_default" {
 }
 
 output "subnets_with_default_nsg" {
-  description = "The subnets that use the shared group, or an existing one, unless `no_nsg_association` is set."
+  description = "The subnets that use the shared group, or an existing one passed as `network_security_group_id`."
   value       = local.default_subnets
 }

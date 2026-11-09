@@ -69,7 +69,8 @@ variable "subnets" {
     nat_gateway = optional(object({
       id = string
     }))
-    no_nsg_association            = optional(bool, false)
+    # Removed. Kept only so a configuration that still sets it fails below instead of being silently ignored.
+    no_nsg_association            = optional(bool)
     create_network_security_group = optional(bool, false)
     network_security_group_config = optional(object({
       azure_default = optional(bool, false)
@@ -115,10 +116,9 @@ The subnets to create in the virtual network, keyed by their name unless `name` 
 - `private_link_service_network_policies_enabled` = (Optional) - Whether network policies apply to private link service on the subnet. Defaults to true.
 - `route_table`                                  = (Optional) - The route table to associate, as `{ id = "..." }`. Not allowed on `AzureBastionSubnet`.
 - `service_endpoints`                            = (Optional) - The service endpoints of the subnet.
-- `create_network_security_group`                = (Optional) - Whether the subnet gets a group of its own, with the default rules plus `security_rules`. Without it the subnet is associated with the group shared by all subnets. Not allowed on `GatewaySubnet`. Defaults to false.
-- `network_security_group_config`                = (Optional) - Only read with `create_network_security_group`. `azure_default = true` keeps just Azure's own default rules plus `security_rules`, and always associates.
+- `create_network_security_group`                = (Optional) - Whether the subnet gets a group of its own, with the default rules plus `security_rules`. Without it the subnet is associated with the group shared by all subnets. Every subnet has exactly one group, except `GatewaySubnet`, which takes none. Defaults to false.
+- `network_security_group_config`                = (Optional) - Only read with `create_network_security_group`. `azure_default = true` keeps just Azure's own default rules plus `security_rules`.
 - `network_security_group_id`                    = (Optional) - An existing group to associate instead of the shared one. Only read when `create_network_security_group` is false, and not on `AzureBastionSubnet` or `GatewaySubnet`.
-- `no_nsg_association`                           = (Optional) - Skip associating a group with the subnet. A group the subnet asked for is still created. Defaults to false.
 
 Accepted but not used, so setting them does nothing: `nat_gateway` (a NAT gateway attaches to every subnet but `GatewaySubnet`), `role_assignments`, `service_endpoint_policies`, `sharing_scope` and `timeouts`.
 
@@ -144,11 +144,6 @@ subnets = {
       azure_default = true
     }
   }
-  "OtherSubnet" = {
-    address_prefixes                = ["100.0.4.0/24"]
-    default_outbound_access_enabled = false
-    no_nsg_association              = true
-  }
   "AzureBastionSubnet" = {
     address_prefixes                = ["100.0.5.0/24"]
     default_outbound_access_enabled = false
@@ -156,6 +151,11 @@ subnets = {
 }
 ```
 DESCRIPTION
+
+  validation {
+    condition     = alltrue([for _, subnet in var.subnets : subnet.no_nsg_association == null])
+    error_message = "no_nsg_association no longer exists: every subnet except GatewaySubnet has a network security group. Remove it."
+  }
 
   validation {
     condition     = alltrue([for k, subnet in var.subnets : !(coalesce(subnet.name, k) == "GatewaySubnet" && subnet.create_network_security_group)])

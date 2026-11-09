@@ -14,7 +14,7 @@ output "address_prefixes" {
 }
 
 output "network_security_group_id" {
-  description = "The ID of the network security group, whether this module created it or the caller passed it in. Created groups are listed even when associate is false."
+  description = "The ID of the network security group, whether this module created it or the caller passed it in. Null on GatewaySubnet."
   value       = local.nsg_id
 }
 

@@ -144,41 +144,21 @@ run "bastion_gets_its_own_nsg" {
   }
 }
 
-run "no_nsg_association_still_creates_the_nsg" {
+run "reject_no_nsg_association" {
   command = plan
 
   variables {
     subnets = {
       "BareSubnet" = {
-        address_prefixes              = ["100.0.5.0/24"]
-        create_network_security_group = true
-        no_nsg_association            = true
-      }
-      "AzureBastionSubnet" = {
-        address_prefixes   = ["100.0.4.0/26"]
-        no_nsg_association = true
-      }
-      "PlainSubnet" = {
-        address_prefixes   = ["100.0.6.0/24"]
+        address_prefixes   = ["100.0.5.0/24"]
         no_nsg_association = true
       }
     }
   }
 
-  assert {
-    condition     = output.all_network_security_groups["BareSubnet"].name == "my-vnet-baresubnet-nsg"
-    error_message = "no_nsg_association only skips the association, the group is still created"
-  }
-
-  assert {
-    condition     = output.all_network_security_groups["AzureBastionSubnet"].name == "my-vnet-azurebastionsubnet-nsg"
-    error_message = "Bastion's group is still created when it is not associated"
-  }
-
-  assert {
-    condition     = !contains(keys(output.all_network_security_groups), "PlainSubnet")
-    error_message = "a subnet that never asked for a group of its own should not get one"
-  }
+  expect_failures = [
+    var.subnets,
+  ]
 }
 
 run "azure_default_false_still_gets_its_own_group" {

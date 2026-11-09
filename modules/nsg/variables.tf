@@ -60,11 +60,10 @@ variable "include_default_rules" {
   description = "Whether to add `default_rules`. False leaves only Azure's own defaults plus `security_rules`."
 }
 
-variable "azure_bastion" {
-  type        = bool
-  default     = false
-  nullable    = false
-  description = "Whether this group is for AzureBastionSubnet and so needs `azure_bastion_security_rules`."
+variable "subnet_name" {
+  type        = string
+  default     = null
+  description = "The name of the subnet this group is for, when it is for one. A group for AzureBastionSubnet also gets `azure_bastion_security_rules`."
 }
 
 variable "default_rules" {
@@ -152,7 +151,7 @@ variable "default_rules" {
 }
 
 variable "azure_bastion_source_ip_prefixes" {
-  description = "Source prefixes allowed by Allow-Https-in-from-Internet when `azure_bastion` is true. The default allows the whole Internet, so narrow it."
+  description = "Source prefixes allowed by Allow-Https-in-from-Internet on a group for AzureBastionSubnet. The default allows the whole Internet, so narrow it."
   type        = set(string)
   default     = ["0.0.0.0/0"]
   nullable    = false
@@ -320,7 +319,7 @@ variable "azure_bastion_security_rules" {
   }
   nullable    = false
   description = <<-EOT
-  Rules Azure Bastion needs, added when `azure_bastion` is true. Passing a map replaces this set
+  Rules Azure Bastion needs, added to a group for AzureBastionSubnet (see `subnet_name`). Passing a map replaces this set
   rather than extending it, and null keeps it. Both `default_rules` and `security_rules` win over
   these by name.
   EOT

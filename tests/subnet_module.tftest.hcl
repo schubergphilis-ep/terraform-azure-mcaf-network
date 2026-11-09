@@ -17,8 +17,9 @@ run "creates_one_subnet_with_defaults" {
   }
 
   variables {
-    name             = "NodeSubnet"
-    address_prefixes = ["100.0.1.0/24"]
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "NodeSubnet"
+    address_prefixes          = ["100.0.1.0/24"]
   }
 
   assert {
@@ -65,9 +66,10 @@ run "delegation_actions_come_from_the_lookup_table" {
   }
 
   variables {
-    name             = "AciSubnet"
-    address_prefixes = ["100.0.4.0/24"]
-    delegate_to      = "Microsoft.ContainerInstance/containerGroups"
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "AciSubnet"
+    address_prefixes          = ["100.0.4.0/24"]
+    delegate_to               = "Microsoft.ContainerInstance/containerGroups"
   }
 
   assert {
@@ -94,9 +96,10 @@ run "network_watchers_delegation_actions_are_found_under_the_dotted_name" {
   }
 
   variables {
-    name             = "WatcherSubnet"
-    address_prefixes = ["100.0.6.0/24"]
-    delegate_to      = "Microsoft.Network/networkWatchers."
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "WatcherSubnet"
+    address_prefixes          = ["100.0.6.0/24"]
+    delegate_to               = "Microsoft.Network/networkWatchers."
   }
 
   assert {
@@ -113,10 +116,11 @@ run "explicit_delegation_actions_win" {
   }
 
   variables {
-    name                = "DbSubnet"
-    address_prefixes    = ["100.0.5.0/24"]
-    delegate_to         = "Microsoft.DBforPostgreSQL/flexibleServers"
-    delegate_to_actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "DbSubnet"
+    address_prefixes          = ["100.0.5.0/24"]
+    delegate_to               = "Microsoft.DBforPostgreSQL/flexibleServers"
+    delegate_to_actions       = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
   }
 
   assert {
@@ -133,9 +137,10 @@ run "service_endpoints_are_passed_through" {
   }
 
   variables {
-    name              = "StorageSubnet"
-    address_prefixes  = ["100.0.7.0/24"]
-    service_endpoints = ["Microsoft.Storage", "Microsoft.KeyVault"]
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "StorageSubnet"
+    address_prefixes          = ["100.0.7.0/24"]
+    service_endpoints         = ["Microsoft.Storage", "Microsoft.KeyVault"]
   }
 
   assert {
@@ -152,11 +157,9 @@ run "an_nsg_id_is_associated_and_nothing_is_created" {
   }
 
   variables {
-    name             = "NodeSubnet"
-    address_prefixes = ["100.0.1.0/24"]
-    network_security_group = {
-      id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    }
+    name                      = "NodeSubnet"
+    address_prefixes          = ["100.0.1.0/24"]
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
   }
 
   assert {
@@ -281,7 +284,7 @@ run "a_group_can_skip_the_default_rules" {
   }
 }
 
-run "an_nsg_is_created_without_being_associated" {
+run "reject_a_subnet_without_a_network_security_group" {
   command = plan
 
   module {
@@ -291,63 +294,14 @@ run "an_nsg_is_created_without_being_associated" {
   variables {
     name             = "NodeSubnet"
     address_prefixes = ["100.0.1.0/24"]
-    location         = "westeurope"
-    network_security_group = {
-      name      = "node-subnet-nsg"
-      associate = false
-      security_rules = {
-        allow-gateway-in = {
-          priority                     = 100
-          direction                    = "Inbound"
-          access                       = "Allow"
-          protocol                     = "Tcp"
-          source_address_prefixes      = ["10.233.4.224/27"]
-          source_port_ranges           = ["*"]
-          destination_address_prefixes = ["*"]
-          destination_port_ranges      = ["443"]
-        }
-      }
-    }
-  }
-
-  assert {
-    condition     = module.nsg[0].name == "node-subnet-nsg" && contains(module.nsg[0].rule_names, "allow-gateway-in")
-    error_message = "associate = false should still create the group and its rules"
-  }
-
-  assert {
-    condition     = length(azurerm_subnet_network_security_group_association.this) == 0
-    error_message = "associate = false should leave the subnet unattached"
-  }
-
-  assert {
-    condition     = output.network_security_group_name == "node-subnet-nsg"
-    error_message = "the unassociated group should still be reported"
-  }
-}
-
-run "reject_not_associating_an_nsg_id" {
-  command = plan
-
-  module {
-    source = "./modules/subnet"
-  }
-
-  variables {
-    name             = "NodeSubnet"
-    address_prefixes = ["100.0.1.0/24"]
-    network_security_group = {
-      id        = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/networkSecurityGroups/existing"
-      associate = false
-    }
   }
 
   expect_failures = [
-    var.network_security_group,
+    var.network_security_group_id,
   ]
 }
 
-run "reject_security_rules_alongside_an_nsg_id" {
+run "reject_both_a_new_and_an_existing_network_security_group" {
   command = plan
 
   module {
@@ -355,27 +309,51 @@ run "reject_security_rules_alongside_an_nsg_id" {
   }
 
   variables {
-    name             = "NodeSubnet"
-    address_prefixes = ["100.0.1.0/24"]
-    network_security_group = {
-      id = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/networkSecurityGroups/existing"
-      security_rules = {
-        allow-in = {
-          priority                     = 100
-          direction                    = "Inbound"
-          access                       = "Allow"
-          protocol                     = "Tcp"
-          source_port_ranges           = ["*"]
-          destination_port_ranges      = ["443"]
-          source_address_prefixes      = ["*"]
-          destination_address_prefixes = ["*"]
-        }
-      }
-    }
+    name                      = "NodeSubnet"
+    address_prefixes          = ["100.0.1.0/24"]
+    location                  = "westeurope"
+    network_security_group    = { name = "node-nsg" }
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
   }
 
   expect_failures = [
-    var.network_security_group,
+    var.network_security_group_id,
+  ]
+}
+
+run "the_gateway_subnet_takes_no_network_security_group" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "GatewaySubnet"
+    address_prefixes = ["100.0.8.0/27"]
+  }
+
+  assert {
+    condition     = length(azurerm_subnet_network_security_group_association.this) == 0 && length(module.nsg) == 0 && output.network_security_group_id == null
+    error_message = "GatewaySubnet is the one subnet with no group, created or associated"
+  }
+}
+
+run "reject_a_network_security_group_on_the_gateway_subnet" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name                      = "GatewaySubnet"
+    address_prefixes          = ["100.0.8.0/27"]
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+  }
+
+  expect_failures = [
+    var.network_security_group_id,
   ]
 }
 
@@ -387,9 +365,10 @@ run "a_route_table_id_is_associated" {
   }
 
   variables {
-    name             = "NodeSubnet"
-    address_prefixes = ["100.0.1.0/24"]
-    route_table_id   = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "NodeSubnet"
+    address_prefixes          = ["100.0.1.0/24"]
+    route_table_id            = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
   }
 
   assert {
@@ -406,9 +385,10 @@ run "reject_a_route_table_on_the_bastion_subnet" {
   }
 
   variables {
-    name             = "AzureBastionSubnet"
-    address_prefixes = ["100.0.5.0/24"]
-    route_table_id   = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "AzureBastionSubnet"
+    address_prefixes          = ["100.0.5.0/24"]
+    route_table_id            = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
   }
 
   expect_failures = [
@@ -424,8 +404,9 @@ run "reject_empty_address_prefixes" {
   }
 
   variables {
-    name             = "BadSubnet"
-    address_prefixes = []
+    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                      = "BadSubnet"
+    address_prefixes          = []
   }
 
   expect_failures = [

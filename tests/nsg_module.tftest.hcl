@@ -143,7 +143,7 @@ run "bastion_adds_its_rules_and_limits_the_internet_source" {
   }
 
   variables {
-    azure_bastion                    = true
+    subnet_name                      = "AzureBastionSubnet"
     azure_bastion_source_ip_prefixes = ["203.0.113.0/24", "198.51.100.0/24"]
   }
 
@@ -208,7 +208,7 @@ run "bastion_internet_rule_defaults_to_the_whole_internet" {
   }
 
   variables {
-    azure_bastion                    = true
+    subnet_name                      = "AzureBastionSubnet"
     azure_bastion_source_ip_prefixes = null
   }
 
@@ -226,7 +226,7 @@ run "a_custom_rule_named_like_a_bastion_rule_is_left_as_written" {
   }
 
   variables {
-    azure_bastion                    = true
+    subnet_name                      = "AzureBastionSubnet"
     azure_bastion_source_ip_prefixes = ["203.0.113.0/24"]
     security_rules = {
       mine = {

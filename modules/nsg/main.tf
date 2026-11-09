@@ -11,7 +11,7 @@ locals {
   }
 
   rules = merge(
-    var.azure_bastion ? local.bastion_rules : {},
+    var.subnet_name == "AzureBastionSubnet" ? local.bastion_rules : {},
     var.include_default_rules ? { for key, rule in var.default_rules : coalesce(rule.name, key) => rule } : {},
     { for key, rule in var.security_rules : coalesce(rule.name, key) => rule },
   )

@@ -25,9 +25,10 @@ module "subnet" {
   azure_bastion_security_rules     = var.azure_bastion_security_rules
   azure_bastion_source_ip_prefixes = var.azure_bastion_source_ip_prefixes
 
-  # Name plus rules to create a group, or an id to associate the vnet-wide one.
-  network_security_group = lookup(local.subnet_network_security_group, each.key, null)
-  route_table_id         = each.value.route_table == null ? null : each.value.route_table.id
+  # A group to create, or the id of one that exists: the vnet-wide one unless the subnet names its own.
+  network_security_group    = local.subnet_network_security_group[each.key]
+  network_security_group_id = local.subnet_network_security_group_id[each.key]
+  route_table_id            = each.value.route_table == null ? null : each.value.route_table.id
 
   default_outbound_access_enabled               = each.value.default_outbound_access_enabled
   delegate_to                                   = each.value.delegate_to
