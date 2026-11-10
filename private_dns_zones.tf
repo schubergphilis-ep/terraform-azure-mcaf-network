@@ -7,7 +7,7 @@ resource "azurerm_private_dns_zone" "this" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "this" {
-  for_each = var.private_dns != null ? var.private_dns : {}
+  for_each = { for k, v in coalesce(var.private_dns, {}) : k => v if v.zone_link_enabled }
 
   name                = each.value.zone_link_name == null ? "${each.key}_link" : each.value.zone_link_name
   private_dns_zone_id = azurerm_private_dns_zone.this[each.key].id

@@ -1,21 +1,23 @@
 locals {
-  # Subnet selections
+  # Azure decides by name what a subnet is, and the name defaults to the key.
+  subnet_names = { for k, v in var.subnets : k => coalesce(v.name, k) }
+
+  # Subnet selections. A GatewaySubnet cannot ask for a group of its own: variables.tf rejects it.
   default_subnets = {
     for k, v in var.subnets :
     k => v if(
       !v.create_network_security_group &&
-      k != "AzureBastionSubnet" &&
-      k != "GatewaySubnet"
+      !contains(["AzureBastionSubnet", "GatewaySubnet"], local.subnet_names[k])
     )
   }
-  azure_bastion_subnet = { for k, v in var.subnets : k => v if k == "AzureBastionSubnet" }
+  azure_bastion_subnet = { for k, v in var.subnets : k => v if local.subnet_names[k] == "AzureBastionSubnet" }
 
   subnets_with_nsg = {
     for k, v in var.subnets :
     k => v if(
       v.create_network_security_group &&
-      v.network_security_group_config == null &&
-      k != "AzureBastionSubnet"
+      !try(v.network_security_group_config.azure_default, false) &&
+      local.subnet_names[k] != "AzureBastionSubnet"
     )
   }
 
@@ -24,100 +26,40 @@ locals {
     k => v if(
       v.create_network_security_group &&
       try(v.network_security_group_config.azure_default, false) &&
-      k != "AzureBastionSubnet"
+      local.subnet_names[k] != "AzureBastionSubnet"
     )
   }
 
-  ## Security rules
-  preprocessed_security_rules = { for key, rule in var.security_rules : rule.name => rule }
-  security_rules              = merge(var.default_rules, local.preprocessed_security_rules)
-  azure_bastion_rules_map     = merge(var.azure_bastion_security_rules, local.security_rules)
-
-  nsg_with_rules = flatten([
-    for subnet_key, subnet in local.subnets_with_nsg : [
-      for rule_key, rule in local.security_rules : {
-        subnet_key                                 = subnet_key
-        name                                       = rule_key
-        description                                = rule.description
-        priority                                   = rule.priority
-        direction                                  = rule.direction
-        access                                     = rule.access
-        protocol                                   = rule.protocol
-        source_port_range                          = rule.source_port_range
-        source_port_ranges                         = rule.source_port_ranges
-        destination_port_range                     = rule.destination_port_range
-        destination_port_ranges                    = rule.destination_port_ranges
-        source_address_prefix                      = rule.source_address_prefix
-        source_address_prefixes                    = rule.source_address_prefixes
-        source_application_security_group_ids      = rule.source_application_security_group_ids
-        destination_address_prefix                 = rule.destination_address_prefix
-        destination_address_prefixes               = rule.destination_address_prefixes
-        destination_application_security_group_ids = rule.destination_application_security_group_ids
-        timeouts                                   = rule.timeouts
-      }
-    ]
-  ])
-
-  nsg_with_default_security_rules = flatten([
-    for subnet_key, subnet in local.subnets_with_nsg_azure_default : [
-      for rule_key, rule in local.preprocessed_security_rules : {
-        subnet_key                                 = subnet_key
-        name                                       = rule_key
-        description                                = rule.description
-        priority                                   = rule.priority
-        direction                                  = rule.direction
-        access                                     = rule.access
-        protocol                                   = rule.protocol
-        source_port_range                          = rule.source_port_range
-        source_port_ranges                         = rule.source_port_ranges
-        destination_port_range                     = rule.destination_port_range
-        destination_port_ranges                    = rule.destination_port_ranges
-        source_address_prefix                      = rule.source_address_prefix
-        source_address_prefixes                    = rule.source_address_prefixes
-        source_application_security_group_ids      = rule.source_application_security_group_ids
-        destination_address_prefix                 = rule.destination_address_prefix
-        destination_address_prefixes               = rule.destination_address_prefixes
-        destination_application_security_group_ids = rule.destination_application_security_group_ids
-        timeouts                                   = rule.timeouts
-      }
-    ]
-  ])
-
-  azure_bastion_security_rules = {
-    for rule_key, rule in local.azure_bastion_rules_map : rule_key => rule_key == "Allow-Https-in-from-Internet" ? merge(rule, {
-      source_address_prefixes = var.azure_bastion_source_ip_prefixes
-    }) : rule
+  # Every subnet gets exactly one group except GatewaySubnet, which gets none: the module either
+  # creates one for it, or is given the id of one that exists. Which rules a created group carries is
+  # ./modules/nsg's business.
+  subnet_network_security_group = {
+    for key, subnet in var.subnets : key => (
+      contains(keys(local.azure_bastion_subnet), key) ? {
+        name                  = lower("${var.vnet_name}-${key}-nsg")
+        location              = var.location
+        include_default_rules = true
+        security_rules        = var.security_rules
+      } :
+      contains(keys(local.subnets_with_nsg_azure_default), key) ? {
+        name                  = lower("${var.vnet_name}-${key}-nsg")
+        location              = var.location
+        include_default_rules = false
+        security_rules        = var.security_rules
+      } :
+      contains(keys(local.subnets_with_nsg), key) ? {
+        name                  = lower("${var.vnet_name}-${key}-nsg")
+        location              = var.location
+        include_default_rules = true
+        security_rules        = var.security_rules
+      } :
+      null
+    )
   }
 
-  azure_bastion_with_rules = flatten([
-    for subnet_key, subnet in local.azure_bastion_subnet : [
-      for rule_key, rule in local.azure_bastion_security_rules : {
-        subnet_key                                 = subnet_key
-        name                                       = rule_key
-        description                                = rule.description
-        priority                                   = rule.priority
-        direction                                  = rule.direction
-        access                                     = rule.access
-        protocol                                   = rule.protocol
-        source_port_range                          = rule.source_port_range
-        source_port_ranges                         = rule.source_port_ranges
-        destination_port_range                     = rule.destination_port_range
-        destination_port_ranges                    = rule.destination_port_ranges
-        source_address_prefix                      = rule.source_address_prefix
-        source_address_prefixes                    = rule.source_address_prefixes
-        source_application_security_group_ids      = rule.source_application_security_group_ids
-        destination_address_prefix                 = rule.destination_address_prefix
-        destination_address_prefixes               = rule.destination_address_prefixes
-        destination_application_security_group_ids = rule.destination_application_security_group_ids
-        timeouts                                   = rule.timeouts
-      }
-    ]
-  ])
-
-  all_custom_network_security_groups = merge(
-    azurerm_network_security_group.additional,
-    azurerm_network_security_group.simple,
-    azurerm_network_security_group.azbastion
-  )
+  subnet_network_security_group_id = {
+    for key, subnet in var.subnets : key => (
+      contains(keys(local.default_subnets), key) ? coalesce(subnet.network_security_group_id, module.nsg.id) : null
+    )
+  }
 }
-
