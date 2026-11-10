@@ -48,10 +48,8 @@ module "subnet" {
   delegate_to          = try(each.value.delegate_to, null)
   service_endpoints    = try(each.value.service_endpoints, null)
 
-  location = "westeurope"
-
   # Give it a group to create, or the id of one that exists. Exactly one, unless it is GatewaySubnet.
-  network_security_group    = try(each.value.own_group, false) ? { name = lower("my-vnet-${each.key}-nsg") } : null
+  network_security_group    = try(each.value.own_group, false) ? { name = lower("my-vnet-${each.key}-nsg"), location = "westeurope" } : null
   network_security_group_id = try(each.value.own_group, false) || try(each.value.no_group, false) ? null : azurerm_network_security_group.shared.id
 }
 

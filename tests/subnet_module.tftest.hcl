@@ -183,9 +183,9 @@ run "a_named_nsg_is_created_with_its_rules" {
   variables {
     name             = "NodeSubnet"
     address_prefixes = ["100.0.1.0/24"]
-    location         = "westeurope"
     network_security_group = {
-      name = "node-subnet-nsg"
+      name     = "node-subnet-nsg"
+      location = "westeurope"
       security_rules = {
         allow-gateway-in = {
           priority                     = 100
@@ -208,7 +208,7 @@ run "a_named_nsg_is_created_with_its_rules" {
 
   assert {
     condition     = module.nsg[0].resource_group_name == "rg-platform-network"
-    error_message = "the group should default to the subnet's resource group"
+    error_message = "the group should be created in the subnet's resource group"
   }
 
   assert {
@@ -237,9 +237,9 @@ run "a_subnet_named_azurebastionsubnet_gets_the_bastion_rules" {
   variables {
     name             = "AzureBastionSubnet"
     address_prefixes = ["100.0.4.0/26"]
-    location         = "westeurope"
     network_security_group = {
-      name = "bastion-nsg"
+      name     = "bastion-nsg"
+      location = "westeurope"
     }
   }
 
@@ -259,9 +259,9 @@ run "a_group_can_skip_the_default_rules" {
   variables {
     name             = "NodeSubnet"
     address_prefixes = ["100.0.1.0/24"]
-    location         = "westeurope"
     network_security_group = {
       name                  = "node-subnet-nsg"
+      location              = "westeurope"
       include_default_rules = false
       security_rules = {
         allow-https = {
@@ -311,8 +311,7 @@ run "reject_both_a_new_and_an_existing_network_security_group" {
   variables {
     name                      = "NodeSubnet"
     address_prefixes          = ["100.0.1.0/24"]
-    location                  = "westeurope"
-    network_security_group    = { name = "node-nsg" }
+    network_security_group    = { name = "node-nsg", location = "westeurope" }
     network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
   }
 

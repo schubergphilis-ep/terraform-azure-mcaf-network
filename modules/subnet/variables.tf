@@ -6,7 +6,7 @@ variable "name" {
 
 variable "resource_group_name" {
   type        = string
-  description = "Name of the resource group holding the virtual network. Subnets are created in the same resource group as their virtual network."
+  description = "Name of the resource group holding the virtual network. Subnets are created in the same resource group as their virtual network, and so is any network security group this module creates."
   nullable    = false
 }
 
@@ -27,12 +27,6 @@ variable "address_prefixes" {
   }
 }
 
-variable "location" {
-  type        = string
-  default     = null
-  description = "Azure region. Only required when this module creates a network security group; subnets themselves have no location."
-}
-
 variable "tags" {
   type        = map(string)
   default     = null
@@ -42,7 +36,7 @@ variable "tags" {
 variable "network_security_group" {
   type = object({
     name                  = string
-    resource_group_name   = optional(string)
+    location              = string
     include_default_rules = optional(bool, true)
     security_rules = optional(map(object({
       name                                       = optional(string)
@@ -68,7 +62,7 @@ variable "network_security_group" {
   default     = null
   description = <<-EOT
     A network security group for this module to create and associate with the subnet, in
-    `resource_group_name` or alongside the virtual network, with the rules ./modules/nsg builds: its
+    `resource_group_name` next to the virtual network, with the rules ./modules/nsg builds: its
     default rules unless `include_default_rules` is false, `security_rules` on top, and Azure
     Bastion's for a subnet named AzureBastionSubnet. To associate a group that exists already, use
     `network_security_group_id` instead.

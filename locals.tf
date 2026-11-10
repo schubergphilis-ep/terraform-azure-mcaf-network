@@ -37,16 +37,19 @@ locals {
     for key, subnet in var.subnets : key => (
       contains(keys(local.azure_bastion_subnet), key) ? {
         name                  = lower("${var.vnet_name}-${key}-nsg")
+        location              = var.location
         include_default_rules = true
         security_rules        = var.security_rules
       } :
       contains(keys(local.subnets_with_nsg_azure_default), key) ? {
         name                  = lower("${var.vnet_name}-${key}-nsg")
+        location              = var.location
         include_default_rules = false
         security_rules        = var.security_rules
       } :
       contains(keys(local.subnets_with_nsg), key) ? {
         name                  = lower("${var.vnet_name}-${key}-nsg")
+        location              = var.location
         include_default_rules = true
         security_rules        = var.security_rules
       } :

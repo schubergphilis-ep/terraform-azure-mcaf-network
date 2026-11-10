@@ -23,14 +23,13 @@ module "subnet" {
   virtual_network_name = "my-vnet"
   address_prefixes     = ["10.0.1.0/24"]
 
-  location = "westeurope"
-
   tags = {
     Environment = "Production"
   }
 
   network_security_group = {
-    name = "my-vnet-appsubnet-nsg"
+    name     = "my-vnet-appsubnet-nsg"
+    location = "westeurope"
 
     security_rules = {
       "Allow-Https-In-From-Office" = {

@@ -29,28 +29,22 @@ resource "azurerm_subnet" "this" {
 }
 
 locals {
-  nsg_create = var.network_security_group != null
-
-  nsg_resource_group_name = (
-    var.network_security_group == null || var.network_security_group.resource_group_name == null
-    ? var.resource_group_name
-    : var.network_security_group.resource_group_name
-  )
+  create_nsg = var.network_security_group != null
 
   # The created group's id only exists once its rules do, so attaching it never exposes a group
   # carrying just Azure's defaults.
-  nsg_id = local.nsg_create ? module.nsg[0].id : var.network_security_group_id
+  nsg_id = local.create_nsg ? module.nsg[0].id : var.network_security_group_id
 }
 
 # The group and its rules live in ./modules/nsg so the root module's shared group gets the same
 # default rules from the same place.
 module "nsg" {
   source = "../nsg"
-  count  = local.nsg_create ? 1 : 0
+  count  = local.create_nsg ? 1 : 0
 
   name                = var.network_security_group.name
-  location            = var.location
-  resource_group_name = local.nsg_resource_group_name
+  location            = var.network_security_group.location
+  resource_group_name = var.resource_group_name
   tags                = var.tags
 
   subnet_name           = var.name

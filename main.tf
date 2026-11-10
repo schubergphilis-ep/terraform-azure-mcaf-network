@@ -17,9 +17,8 @@ module "subnet" {
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = each.value.address_prefixes
 
-  # The submodule needs these to create a group of its own.
-  location = var.location
-  tags     = var.tags
+  # The submodule needs this to create a group of its own.
+  tags = var.tags
 
   default_rules                    = var.default_rules
   azure_bastion_security_rules     = var.azure_bastion_security_rules

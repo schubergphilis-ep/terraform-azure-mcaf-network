@@ -21,10 +21,10 @@ output "network_security_group_id" {
 
 output "network_security_group_name" {
   description = "Name of the group this module created, or null when it associated one it does not own."
-  value       = local.nsg_create ? module.nsg[0].name : null
+  value       = local.create_nsg ? module.nsg[0].name : null
 }
 
 output "network_security_group_location" {
   description = "Region of the group this module created, or null when it associated one it does not own."
-  value       = local.nsg_create ? module.nsg[0].location : null
+  value       = local.create_nsg ? module.nsg[0].location : null
 }
