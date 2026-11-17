@@ -60,7 +60,7 @@ run "no_default_rules_leaves_only_custom" {
   }
 }
 
-run "a_custom_rule_replaces_a_default_by_name" {
+run "a_custom_rule_replaces_a_default_with_the_same_key" {
   command = plan
 
   module {
@@ -69,8 +69,7 @@ run "a_custom_rule_replaces_a_default_by_name" {
 
   variables {
     security_rules = {
-      anything = {
-        name                         = "Deny-Any-Any-Any-In"
+      "Deny-Any-Any-Any-In" = {
         access                       = "Allow"
         direction                    = "Inbound"
         priority                     = 4096
@@ -116,7 +115,6 @@ run "passed_default_rules_replace_the_built_in_set" {
   variables {
     default_rules = {
       only = {
-        name                         = "only"
         access                       = "Deny"
         direction                    = "Inbound"
         priority                     = 4096
@@ -158,48 +156,6 @@ run "bastion_adds_its_rules_and_limits_the_internet_source" {
   }
 }
 
-run "a_custom_rule_replaces_a_default_whose_key_differs_from_its_name" {
-  command = plan
-
-  module {
-    source = "./modules/nsg"
-  }
-
-  variables {
-    default_rules = {
-      some-key = {
-        name                         = "Deny-All-In"
-        access                       = "Deny"
-        direction                    = "Inbound"
-        priority                     = 4096
-        protocol                     = "*"
-        source_address_prefixes      = ["*"]
-        source_port_ranges           = ["*"]
-        destination_address_prefixes = ["*"]
-        destination_port_ranges      = ["*"]
-      }
-    }
-    security_rules = {
-      mine = {
-        name                         = "Deny-All-In"
-        access                       = "Allow"
-        direction                    = "Inbound"
-        priority                     = 4096
-        protocol                     = "*"
-        source_address_prefixes      = ["*"]
-        source_port_ranges           = ["*"]
-        destination_address_prefixes = ["*"]
-        destination_port_ranges      = ["*"]
-      }
-    }
-  }
-
-  assert {
-    condition     = keys(azurerm_network_security_rule.this) == ["Deny-All-In"] && azurerm_network_security_rule.this["Deny-All-In"].access == "Allow"
-    error_message = "rules are matched by name, so two entries naming the same rule must collapse to the custom one"
-  }
-}
-
 run "bastion_internet_rule_defaults_to_the_whole_internet" {
   command = plan
 
@@ -229,8 +185,7 @@ run "a_custom_rule_named_like_a_bastion_rule_is_left_as_written" {
     subnet_name                      = "AzureBastionSubnet"
     azure_bastion_source_ip_prefixes = ["203.0.113.0/24"]
     security_rules = {
-      mine = {
-        name                         = "Allow-Https-in-from-Internet"
+      "Allow-Https-in-from-Internet" = {
         access                       = "Allow"
         direction                    = "Inbound"
         priority                     = 4040
@@ -304,7 +259,6 @@ run "reject_an_empty_list_in_default_rules" {
     include_default_rules = false
     default_rules = {
       bad = {
-        name                         = "bad"
         access                       = "Allow"
         direction                    = "Inbound"
         priority                     = 100
@@ -333,7 +287,6 @@ run "reject_an_empty_list_in_azure_bastion_security_rules" {
     include_default_rules = false
     azure_bastion_security_rules = {
       bad = {
-        name                         = "bad"
         access                       = "Allow"
         direction                    = "Inbound"
         priority                     = 100

@@ -4,7 +4,7 @@ resource "azurerm_subnet" "this" {
   virtual_network_name                          = var.virtual_network_name
   address_prefixes                              = var.address_prefixes
   default_outbound_access_enabled               = var.default_outbound_access_enabled
-  private_endpoint_network_policies             = var.private_endpoint_network_policies
+  private_endpoint_network_policies             = coalesce(var.private_endpoint_network_policies, var.name == "GatewaySubnet" ? "Disabled" : "NetworkSecurityGroupEnabled")
   private_link_service_network_policies_enabled = var.private_link_service_network_policies_enabled
 
   dynamic "delegation" {
@@ -30,10 +30,6 @@ resource "azurerm_subnet" "this" {
 
 locals {
   create_nsg = var.network_security_group != null
-
-  # The created group's id only exists once its rules do, so attaching it never exposes a group
-  # carrying just Azure's defaults.
-  nsg_id = local.create_nsg ? module.nsg[0].id : var.network_security_group_id
 }
 
 # The group and its rules live in ./modules/nsg so the root module's shared group gets the same
@@ -42,7 +38,7 @@ module "nsg" {
   source = "../nsg"
   count  = local.create_nsg ? 1 : 0
 
-  name                = var.network_security_group.name
+  name                = coalesce(var.network_security_group.name, lower("${var.virtual_network_name}-${var.name}-nsg"))
   location            = var.network_security_group.location
   resource_group_name = var.resource_group_name
   tags                = var.tags
@@ -54,6 +50,12 @@ module "nsg" {
   default_rules                    = var.default_rules
   azure_bastion_security_rules     = var.azure_bastion_security_rules
   azure_bastion_source_ip_prefixes = var.azure_bastion_source_ip_prefixes
+}
+
+locals {
+  # The created group's id only exists once its rules do, so attaching it never exposes a group
+  # carrying just Azure's defaults.
+  nsg_id = local.create_nsg ? module.nsg[0].id : var.network_security_group_id
 }
 
 resource "azurerm_subnet_network_security_group_association" "this" {

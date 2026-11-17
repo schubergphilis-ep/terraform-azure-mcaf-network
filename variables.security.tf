@@ -1,6 +1,5 @@
 variable "security_rules" {
   type = map(object({
-    name                                       = string
     access                                     = string
     description                                = optional(string)
     destination_address_prefixes               = set(string)
@@ -22,13 +21,12 @@ variable "security_rules" {
   default     = {}
   nullable    = false
   description = <<DESCRIPTION
-Rules added to every network security group this module creates, the shared one included, on top of `default_rules`. A rule replaces a default or Bastion rule with the same `name`. The attributes are those of `azurerm_network_security_rule`, minus `resource_group_name` and `network_security_group_name`, which are set for you, and with ports and addresses as lists only: `source_port_ranges`, `destination_port_ranges`, `source_address_prefixes` and `destination_address_prefixes`, all four required and not empty. `*` and tags such as `VirtualNetwork` are accepted by Azure only on their own, so give them as the single entry of a list; several entries must be plain ports, ranges or CIDRs. `timeouts` take durations such as `30m`. The key is free-form.
+Rules added to every network security group this module creates, the shared one included, on top of `default_rules`. A rule replaces a default or Bastion rule with the same key. The attributes are those of `azurerm_network_security_rule`, minus `resource_group_name` and `network_security_group_name`, which are set for you, and with ports and addresses as lists only: `source_port_ranges`, `destination_port_ranges`, `source_address_prefixes` and `destination_address_prefixes`, all four required and not empty. `*` and tags such as `VirtualNetwork` are accepted by Azure only on their own, so give them as the single entry of a list; several entries must be plain ports, ranges or CIDRs. `timeouts` take durations such as `30m`. The key is the rule's name in Azure.
 
 ```hcl
 security_rules = {
-  "test" = {
+  "Allow-HTTPS-Internet" = {
     access                       = "Allow"
-    name                         = "Allow-HTTPS-Internet"
     description                  = "Allow HTTPS traffic to the Internet"
     destination_address_prefixes = ["Internet"]
     destination_port_ranges      = ["443"]
@@ -50,7 +48,6 @@ DESCRIPTION
 
 variable "default_rules" {
   type = map(object({
-    name                                       = string
     access                                     = string
     direction                                  = string
     priority                                   = number
@@ -73,7 +70,7 @@ variable "default_rules" {
   description = <<-EOT
     Rules added to every network security group this module makes, except for subnets using
     `network_security_group_config.azure_default`. Null keeps the built-in set listed in
-    [./modules/nsg](./modules/nsg/variables.tf); a map replaces it. `security_rules` win over these by name.
+    [./modules/nsg](./modules/nsg/variables.tf); a map replaces it. `security_rules` win over these by key.
   EOT
 
   validation {
@@ -95,7 +92,6 @@ variable "azure_bastion_source_ip_prefixes" {
 
 variable "azure_bastion_security_rules" {
   type = map(object({
-    name                                       = string
     access                                     = string
     direction                                  = string
     priority                                   = number
@@ -118,7 +114,7 @@ variable "azure_bastion_security_rules" {
   description = <<-EOT
     Rules Azure Bastion needs on the AzureBastionSubnet group. Null keeps the built-in set listed in
     [./modules/nsg](./modules/nsg/variables.tf); a map replaces it. `default_rules` and `security_rules` win over
-    these by name.
+    these by key.
   EOT
 
   validation {

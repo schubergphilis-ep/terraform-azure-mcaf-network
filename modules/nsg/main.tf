@@ -1,10 +1,10 @@
 locals {
-  # Every set is keyed by rule name, so a custom rule replaces a default one that shares its name,
-  # which replaces a Bastion one. The Internet limit goes on Bastion's own rule before the merge, so
-  # a custom rule of that name is taken as written.
+  # Rules are keyed by name. When two sets share a name the later one wins: security_rules over
+  # default_rules over Bastion's. Bastion's Internet rule gets azure_bastion_source_ip_prefixes before
+  # the merge, so a custom rule of that name is used as written.
   bastion_rules = {
-    for key, rule in var.azure_bastion_security_rules : coalesce(rule.name, key) => (
-      coalesce(rule.name, key) == "Allow-Https-in-from-Internet" ? merge(rule, {
+    for name, rule in var.azure_bastion_security_rules : name => (
+      name == "Allow-Https-in-from-Internet" ? merge(rule, {
         source_address_prefixes = var.azure_bastion_source_ip_prefixes
       }) : rule
     )
@@ -12,8 +12,8 @@ locals {
 
   rules = merge(
     var.subnet_name == "AzureBastionSubnet" ? local.bastion_rules : {},
-    var.include_default_rules ? { for key, rule in var.default_rules : coalesce(rule.name, key) => rule } : {},
-    { for key, rule in var.security_rules : coalesce(rule.name, key) => rule },
+    var.include_default_rules ? var.default_rules : {},
+    var.security_rules,
   )
 }
 

@@ -38,8 +38,8 @@ run "creates_one_subnet_with_defaults" {
   }
 
   assert {
-    condition     = azurerm_subnet.this.private_endpoint_network_policies == "Disabled"
-    error_message = "private_endpoint_network_policies should default to Disabled"
+    condition     = azurerm_subnet.this.private_endpoint_network_policies == "NetworkSecurityGroupEnabled"
+    error_message = "a subnet with a group should default to NetworkSecurityGroupEnabled, so the group applies to its private endpoints"
   }
 
   assert {
@@ -279,7 +279,7 @@ run "a_group_can_skip_the_default_rules" {
   }
 
   assert {
-    condition     = module.nsg[0].rule_names == ["allow-https"]
+    condition     = toset(module.nsg[0].rule_names) == toset(["allow-https"])
     error_message = "include_default_rules = false should leave only the rules given"
   }
 }
@@ -411,4 +411,63 @@ run "reject_empty_address_prefixes" {
   expect_failures = [
     var.address_prefixes,
   ]
+}
+
+run "gateway_subnet_defaults_private_endpoint_policies_to_disabled" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "GatewaySubnet"
+    address_prefixes = ["100.0.8.0/27"]
+  }
+
+  assert {
+    condition     = azurerm_subnet.this.private_endpoint_network_policies == "Disabled"
+    error_message = "GatewaySubnet has no group, so there is nothing for private endpoint policies to enforce"
+  }
+}
+
+run "an_explicit_private_endpoint_policy_wins" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    network_security_group_id         = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                              = "NodeSubnet"
+    address_prefixes                  = ["100.0.1.0/24"]
+    private_endpoint_network_policies = "Disabled"
+  }
+
+  assert {
+    condition     = azurerm_subnet.this.private_endpoint_network_policies == "Disabled"
+    error_message = "a value set by the caller must not be replaced by the default"
+  }
+}
+
+run "the_group_is_named_after_the_vnet_and_subnet_by_default" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    network_security_group = {
+      location = "westeurope"
+    }
+  }
+
+  assert {
+    condition     = module.nsg[0].name == "vnet-platform-nodesubnet-nsg"
+    error_message = "the default name should be lower(<virtual_network_name>-<name>-nsg), as the root module names per-subnet groups"
+  }
 }

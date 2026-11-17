@@ -35,11 +35,10 @@ variable "tags" {
 
 variable "network_security_group" {
   type = object({
-    name                  = string
+    name                  = optional(string)
     location              = string
     include_default_rules = optional(bool, true)
     security_rules = optional(map(object({
-      name                                       = optional(string)
       priority                                   = number
       direction                                  = string
       access                                     = string
@@ -65,7 +64,8 @@ variable "network_security_group" {
     `resource_group_name` next to the virtual network, with the rules ./modules/nsg builds: its
     default rules unless `include_default_rules` is false, `security_rules` on top, and Azure
     Bastion's for a subnet named AzureBastionSubnet. To associate a group that exists already, use
-    `network_security_group_id` instead.
+    `network_security_group_id` instead. `name` defaults to
+    `lower("<virtual_network_name>-<name>-nsg")`.
   EOT
 
   validation {
@@ -148,8 +148,8 @@ variable "delegate_to_actions" {
 
 variable "private_endpoint_network_policies" {
   type        = string
-  default     = "Disabled"
-  description = "Enable or disable network policies for private endpoints on the subnet. Possible values are `Disabled`, `Enabled`, `NetworkSecurityGroupEnabled` and `RouteTableEnabled`."
+  default     = null
+  description = "Network policies for private endpoints on the subnet: `Disabled`, `Enabled`, `NetworkSecurityGroupEnabled` or `RouteTableEnabled`. Null gives `NetworkSecurityGroupEnabled`, so the subnet's group applies to its private endpoints, and `Disabled` on GatewaySubnet, which has no group."
 }
 
 variable "private_link_service_network_policies_enabled" {

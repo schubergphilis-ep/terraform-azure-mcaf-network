@@ -1,7 +1,8 @@
 output "id" {
-  description = "The ID of the network security group. Only available once its rules exist, so attaching it never exposes a group carrying just Azure's defaults."
+  description = "The ID of the network security group."
   value       = azurerm_network_security_group.this.id
 
+  # Resolves after the rules, so a subnet is never associated while only Azure's defaults apply.
   depends_on = [azurerm_network_security_rule.this]
 }
 

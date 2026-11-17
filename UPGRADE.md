@@ -17,11 +17,13 @@ Subnets, and every per-subnet network security group, moved out of the root modu
 
 `azurerm_network_security_group.this` and `azurerm_network_security_rule.default[...]` are the shared group and its rules. They move to `module.nsg` by themselves. The `<rule name>` is the rule's name in Azure, so no rule is renamed.
 
-One exception: if a key in `default_rules` or `azure_bastion_security_rules` differs from its `name`, `v2.x` named the per-subnet copies after the key and the shared ones after `name`. The per-subnet copies are then renamed, which replaces them, and the shared rules need one more block, because rules are now keyed by name:
+Rules are named by their key now. The `name` attribute is gone from `security_rules`, `default_rules` and `azure_bastion_security_rules`, and a leftover one is ignored, so where a key differs from its `name`, set the key to the `name`. Otherwise the rule is renamed in Azure, which replaces it. This includes `security_rules`, whose keys `v2.x` ignored.
+
+One more exception: if a key in `default_rules` or `azure_bastion_security_rules` differs from its `name`, `v2.x` named the per-subnet copies after the key and the shared ones after `name`. The per-subnet copies are then renamed, which replaces them, and the shared rules need one more block, because their key changes to the name:
 
 ```hcl
 moved {
-  from = module.network.module.nsg.azurerm_network_security_rule.this["<key>"]
+  from = module.network.module.nsg.azurerm_network_security_rule.this["<old key>"]
   to   = module.network.module.nsg.azurerm_network_security_rule.this["<name>"]
 }
 ```
