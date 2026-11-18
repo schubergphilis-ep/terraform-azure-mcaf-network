@@ -148,8 +148,9 @@ variable "delegate_to_actions" {
 
 variable "private_endpoint_network_policies" {
   type        = string
-  default     = null
-  description = "Network policies for private endpoints on the subnet: `Disabled`, `Enabled`, `NetworkSecurityGroupEnabled` or `RouteTableEnabled`. Null gives `NetworkSecurityGroupEnabled`, so the subnet's group applies to its private endpoints, and `Disabled` on GatewaySubnet, which has no group."
+  default     = "NetworkSecurityGroupEnabled"
+  nullable    = false
+  description = "Network policies for private endpoints on the subnet: `Disabled`, `Enabled`, `NetworkSecurityGroupEnabled` or `RouteTableEnabled`. The default makes the subnet's group apply to its private endpoints. Ignored on GatewaySubnet, which has no group and always gets `Disabled`."
 }
 
 variable "private_link_service_network_policies_enabled" {

@@ -413,7 +413,7 @@ run "reject_empty_address_prefixes" {
   ]
 }
 
-run "gateway_subnet_defaults_private_endpoint_policies_to_disabled" {
+run "gateway_subnet_always_gets_disabled_private_endpoint_policies" {
   command = plan
 
   module {
@@ -421,8 +421,9 @@ run "gateway_subnet_defaults_private_endpoint_policies_to_disabled" {
   }
 
   variables {
-    name             = "GatewaySubnet"
-    address_prefixes = ["100.0.8.0/27"]
+    name                              = "GatewaySubnet"
+    address_prefixes                  = ["100.0.8.0/27"]
+    private_endpoint_network_policies = "NetworkSecurityGroupEnabled"
   }
 
   assert {

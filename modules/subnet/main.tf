@@ -4,7 +4,7 @@ resource "azurerm_subnet" "this" {
   virtual_network_name                          = var.virtual_network_name
   address_prefixes                              = var.address_prefixes
   default_outbound_access_enabled               = var.default_outbound_access_enabled
-  private_endpoint_network_policies             = coalesce(var.private_endpoint_network_policies, var.name == "GatewaySubnet" ? "Disabled" : "NetworkSecurityGroupEnabled")
+  private_endpoint_network_policies             = var.name == "GatewaySubnet" ? "Disabled" : var.private_endpoint_network_policies
   private_link_service_network_policies_enabled = var.private_link_service_network_policies_enabled
 
   dynamic "delegation" {
