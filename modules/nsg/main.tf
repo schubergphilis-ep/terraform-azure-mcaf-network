@@ -1,7 +1,8 @@
 locals {
-  # Rules are keyed by name. When two sets share a name the later one wins: security_rules over
-  # default_rules over Bastion's. Bastion's Internet rule gets azure_bastion_source_ip_prefixes before
-  # the merge, so a custom rule of that name is used as written.
+  # Rules are keyed by name. When two rules have the same name, the one from the set with the higher
+  # precedence replaces the other. Precedence, highest first: security_rules, default_rules, Bastion rules.
+  # Bastion's Internet rule gets azure_bastion_source_ip_prefixes before the merge. A rule with the same
+  # name from a higher set replaces it, so that rule then wins the precedence.
   bastion_rules = {
     for name, rule in var.azure_bastion_security_rules : name => (
       name == "Allow-Https-in-from-Internet" ? merge(rule, {
