@@ -15,7 +15,7 @@ Subnets, and every per-subnet network security group, moved out of the root modu
 | Per-subnet group | `azurerm_network_security_group.<simple\|additional\|azbastion>["<key>"]` | `module.subnet["<key>"].module.nsg[0].azurerm_network_security_group.this` |
 | Per-subnet rule | `azurerm_network_security_rule.<simple\|additional\|azbastion>["<subnet>_<priority>_<access>_<direction>"]` (the whole key is lower-cased) | `module.subnet["<key>"].module.nsg[0].azurerm_network_security_rule.this["<rule name>"]` |
 
-`azurerm_network_security_group.this` and `azurerm_network_security_rule.default[...]` are the shared group and its rules. They move to `module.nsg` by themselves. The `<rule name>` is the rule's name in Azure, so no rule is renamed.
+`azurerm_network_security_group.this` and `azurerm_network_security_rule.default[...]` are the shared group and its rules. They move to `module.nsg[0]` by themselves. The `<rule name>` is the rule's name in Azure, so no rule is renamed.
 
 Rules are named by their key now. The `name` attribute is gone from `security_rules`, `default_rules` and `azure_bastion_security_rules`, and a leftover one is ignored, so where a key differs from its `name`, set the key to the `name`. Otherwise the rule is renamed in Azure, which replaces it. This includes `security_rules`, whose keys `v2.x` ignored.
 
@@ -23,8 +23,8 @@ One more exception: if a key in `default_rules` or `azure_bastion_security_rules
 
 ```hcl
 moved {
-  from = module.network.module.nsg.azurerm_network_security_rule.this["<old key>"]
-  to   = module.network.module.nsg.azurerm_network_security_rule.this["<name>"]
+  from = module.network.module.nsg[0].azurerm_network_security_rule.this["<old key>"]
+  to   = module.network.module.nsg[0].azurerm_network_security_rule.this["<name>"]
 }
 ```
 
@@ -36,7 +36,7 @@ The minimum stays `azurerm` v5, which `v2.0.0` already required. The constraint 
 
 The `Resource Type` tag is no longer added to the virtual network, NAT gateway, public IP or network security groups, so the first apply removes it from them: an in-place update. If something depends on it, put a tag of your own in `tags`.
 
-Every subnet now has exactly one network security group, except `GatewaySubnet`, which has none. Which group a subnet gets does not change, apart from the subnets that used `no_nsg_association`, below.
+A subnet has at most one network security group, and `GatewaySubnet` has none. Which group a subnet gets does not change, apart from the subnets that used `no_nsg_association`, below.
 
 > [!WARNING]
 > `route_table` on a subnet now takes effect. It was accepted and silently ignored through `v2.x`, because no resource read it. If you have been passing it, the first apply after upgrading creates the association — and replaces whatever route table is attached to that subnet today. Check `route_table` against live state before applying, or drop the attribute.
@@ -67,7 +67,8 @@ The built-in default rules reach Azure exactly as before. A rule you had written
 
 Each of these changes what an existing configuration plans. Check them against yours before applying.
 
-- **`no_nsg_association` is removed**, and setting it fails at plan. It skipped only the association: a subnet with `create_network_security_group = true`, and `AzureBastionSubnet`, still got their group and rules created, left unattached, and only a subnet on the shared or an existing group ended up with none. Now every such subnet is associated with its group. Remove the attribute and the first apply attaches the group the subnet would have had: its own, the one named by `network_security_group_id`, or the shared one. `GatewaySubnet` is the only subnet that can be without a group.
+- **`no_nsg_association` now leaves the subnet without a group at all.** It used to skip only the association: a subnet with `create_network_security_group = true`, and `AzureBastionSubnet`, still got their group and rules created, left unattached. Now nothing is created for such a subnet, so the first apply destroys that unattached group and its rules. Setting it together with `create_network_security_group` or `network_security_group_id` fails at plan. A subnet on the shared group that set it is unchanged: it has no group.
+- **The shared group is created only while a subnet uses it.** `v2.x` always created it. If every subnet has its own group, takes an existing one through `network_security_group_id`, sets `no_nsg_association`, or is `GatewaySubnet`, the first apply destroys the shared group and its rules. A subnet that sets `network_security_group_id` still counts as a user of the shared group, so the group stays.
 - **`create_network_security_group = true` with `network_security_group_config = { azure_default = false }`** (or `{}`) used to give the subnet no group at all, not even the shared one. It now gets a group of its own with the default rules, and is associated. Those rules deny all other traffic, so check what the subnet relies on first.
 - **`create_network_security_group = true` on `GatewaySubnet`** now fails at plan: Azure does not support a group there, and one can stop the gateway working. Remove it, and the first apply destroys the group, its rules and its association.
 - **`AzureBastionSubnet` and `GatewaySubnet` are recognised by the subnet's name**, which defaults to its key, instead of by the key alone. It only differs when `name` is one of them under another key: a subnet named `AzureBastionSubnet` now gets Bastion's own group, which replaces its association, and a subnet named `GatewaySubnet` now gets no NAT gateway and no group association. The first apply destroys what no longer applies.
@@ -132,6 +133,6 @@ Each of these changes what an existing configuration plans. Check them against y
    }
    ```
 
-8. Run `terraform plan` and confirm it reports `0 to add` and `0 to destroy`, apart from what the warnings and *Other behaviour changes* above describe: the route table associations `route_table` now creates, the associations for subnets that used `no_nsg_association`, and the groups, public IP and DNS link that come or go. The only other changes should be in-place: the shared group's rules gain their `description`, rules written with a one-entry plural list, and Bastion's Internet rule, move to the singular argument, and the `Resource Type` tag goes away. Anything else means a block is missing or a key is wrong — do not apply until the plan matches.
+8. Run `terraform plan` and confirm it reports `0 to add` and `0 to destroy`, apart from what the warnings and *Other behaviour changes* above describe: the route table associations `route_table` now creates, and the groups, public IP and DNS link that come or go, among them the groups of subnets that set `no_nsg_association` and the shared group when no subnet uses it. The only other changes should be in-place: the shared group's rules gain their `description`, rules written with a one-entry plural list, and Bastion's Internet rule, move to the singular argument, and the `Resource Type` tag goes away. Anything else means a block is missing or a key is wrong — do not apply until the plan matches.
 
 9. Apply, then drop the `moved` blocks once every consumer has upgraded.

@@ -17,9 +17,9 @@ run "creates_one_subnet_with_defaults" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "NodeSubnet"
-    address_prefixes          = ["100.0.1.0/24"]
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "NodeSubnet"
+    address_prefixes       = ["100.0.1.0/24"]
   }
 
   assert {
@@ -66,10 +66,10 @@ run "delegation_actions_come_from_the_lookup_table" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "AciSubnet"
-    address_prefixes          = ["100.0.4.0/24"]
-    delegate_to               = "Microsoft.ContainerInstance/containerGroups"
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "AciSubnet"
+    address_prefixes       = ["100.0.4.0/24"]
+    delegate_to            = "Microsoft.ContainerInstance/containerGroups"
   }
 
   assert {
@@ -96,10 +96,10 @@ run "network_watchers_delegation_actions_are_found_under_the_dotted_name" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "WatcherSubnet"
-    address_prefixes          = ["100.0.6.0/24"]
-    delegate_to               = "Microsoft.Network/networkWatchers."
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "WatcherSubnet"
+    address_prefixes       = ["100.0.6.0/24"]
+    delegate_to            = "Microsoft.Network/networkWatchers."
   }
 
   assert {
@@ -116,11 +116,11 @@ run "explicit_delegation_actions_win" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "DbSubnet"
-    address_prefixes          = ["100.0.5.0/24"]
-    delegate_to               = "Microsoft.DBforPostgreSQL/flexibleServers"
-    delegate_to_actions       = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "DbSubnet"
+    address_prefixes       = ["100.0.5.0/24"]
+    delegate_to            = "Microsoft.DBforPostgreSQL/flexibleServers"
+    delegate_to_actions    = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
   }
 
   assert {
@@ -137,10 +137,10 @@ run "service_endpoints_are_passed_through" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "StorageSubnet"
-    address_prefixes          = ["100.0.7.0/24"]
-    service_endpoints         = ["Microsoft.Storage", "Microsoft.KeyVault"]
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "StorageSubnet"
+    address_prefixes       = ["100.0.7.0/24"]
+    service_endpoints      = ["Microsoft.Storage", "Microsoft.KeyVault"]
   }
 
   assert {
@@ -157,9 +157,9 @@ run "an_nsg_id_is_associated_and_nothing_is_created" {
   }
 
   variables {
-    name                      = "NodeSubnet"
-    address_prefixes          = ["100.0.1.0/24"]
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                   = "NodeSubnet"
+    address_prefixes       = ["100.0.1.0/24"]
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
   }
 
   assert {
@@ -284,7 +284,7 @@ run "a_group_can_skip_the_default_rules" {
   }
 }
 
-run "reject_a_subnet_without_a_network_security_group" {
+run "a_subnet_can_have_no_network_security_group" {
   command = plan
 
   module {
@@ -296,9 +296,10 @@ run "reject_a_subnet_without_a_network_security_group" {
     address_prefixes = ["100.0.1.0/24"]
   }
 
-  expect_failures = [
-    var.network_security_group_id,
-  ]
+  assert {
+    condition     = length(azurerm_subnet_network_security_group_association.this) == 0 && length(module.nsg) == 0 && output.network_security_group_id == null
+    error_message = "a null network_security_group should create and associate nothing"
+  }
 }
 
 run "reject_both_a_new_and_an_existing_network_security_group" {
@@ -309,14 +310,17 @@ run "reject_both_a_new_and_an_existing_network_security_group" {
   }
 
   variables {
-    name                      = "NodeSubnet"
-    address_prefixes          = ["100.0.1.0/24"]
-    network_security_group    = { name = "node-nsg", location = "westeurope" }
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    network_security_group = {
+      id       = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+      name     = "node-nsg"
+      location = "westeurope"
+    }
   }
 
   expect_failures = [
-    var.network_security_group_id,
+    var.network_security_group,
   ]
 }
 
@@ -346,13 +350,13 @@ run "reject_a_network_security_group_on_the_gateway_subnet" {
   }
 
   variables {
-    name                      = "GatewaySubnet"
-    address_prefixes          = ["100.0.8.0/27"]
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    name                   = "GatewaySubnet"
+    address_prefixes       = ["100.0.8.0/27"]
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
   }
 
   expect_failures = [
-    var.network_security_group_id,
+    var.network_security_group,
   ]
 }
 
@@ -364,10 +368,10 @@ run "a_route_table_id_is_associated" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "NodeSubnet"
-    address_prefixes          = ["100.0.1.0/24"]
-    route_table_id            = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "NodeSubnet"
+    address_prefixes       = ["100.0.1.0/24"]
+    route_table_id         = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
   }
 
   assert {
@@ -384,10 +388,10 @@ run "reject_a_route_table_on_the_bastion_subnet" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "AzureBastionSubnet"
-    address_prefixes          = ["100.0.5.0/24"]
-    route_table_id            = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "AzureBastionSubnet"
+    address_prefixes       = ["100.0.5.0/24"]
+    route_table_id         = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/routeTables/spoke-rt"
   }
 
   expect_failures = [
@@ -403,9 +407,9 @@ run "reject_empty_address_prefixes" {
   }
 
   variables {
-    network_security_group_id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
-    name                      = "BadSubnet"
-    address_prefixes          = []
+    network_security_group = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
+    name                   = "BadSubnet"
+    address_prefixes       = []
   }
 
   expect_failures = [
@@ -440,7 +444,7 @@ run "an_explicit_private_endpoint_policy_wins" {
   }
 
   variables {
-    network_security_group_id         = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+    network_security_group            = { id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg" }
     name                              = "NodeSubnet"
     address_prefixes                  = ["100.0.1.0/24"]
     private_endpoint_network_policies = "Disabled"
@@ -452,7 +456,43 @@ run "an_explicit_private_endpoint_policy_wins" {
   }
 }
 
-run "the_group_is_named_after_the_vnet_and_subnet_by_default" {
+run "reject_a_group_with_neither_an_id_nor_a_name" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name                   = "NodeSubnet"
+    address_prefixes       = ["100.0.1.0/24"]
+    network_security_group = { location = "westeurope" }
+  }
+
+  expect_failures = [
+    var.network_security_group,
+  ]
+}
+
+run "reject_creating_a_group_without_a_location" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name                   = "NodeSubnet"
+    address_prefixes       = ["100.0.1.0/24"]
+    network_security_group = { name = "node-nsg" }
+  }
+
+  expect_failures = [
+    var.network_security_group,
+  ]
+}
+
+run "reject_creation_attributes_on_a_group_given_by_id" {
   command = plan
 
   module {
@@ -463,12 +503,23 @@ run "the_group_is_named_after_the_vnet_and_subnet_by_default" {
     name             = "NodeSubnet"
     address_prefixes = ["100.0.1.0/24"]
     network_security_group = {
-      location = "westeurope"
+      id = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+      security_rules = {
+        ignored = {
+          priority                     = 100
+          direction                    = "Inbound"
+          access                       = "Allow"
+          protocol                     = "Tcp"
+          source_address_prefixes      = ["*"]
+          source_port_ranges           = ["*"]
+          destination_address_prefixes = ["*"]
+          destination_port_ranges      = ["443"]
+        }
+      }
     }
   }
 
-  assert {
-    condition     = module.nsg[0].name == "vnet-platform-nodesubnet-nsg"
-    error_message = "the default name should be lower(<virtual_network_name>-<name>-nsg), as the root module names per-subnet groups"
-  }
+  expect_failures = [
+    var.network_security_group,
+  ]
 }

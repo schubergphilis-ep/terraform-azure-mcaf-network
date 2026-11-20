@@ -35,9 +35,10 @@ variable "tags" {
 
 variable "network_security_group" {
   type = object({
+    id                    = optional(string)
     name                  = optional(string)
-    location              = string
-    include_default_rules = optional(bool, true)
+    location              = optional(string)
+    include_default_rules = optional(bool)
     security_rules = optional(map(object({
       priority                                   = number
       direction                                  = string
@@ -60,41 +61,40 @@ variable "network_security_group" {
   })
   default     = null
   description = <<-EOT
-    A network security group for this module to create and associate with the subnet, in
-    `resource_group_name` next to the virtual network, with the rules ./modules/nsg builds: its
-    default rules unless `include_default_rules` is false, `security_rules` on top, and Azure
-    Bastion's for a subnet named AzureBastionSubnet. To associate a group that exists already, use
-    `network_security_group_id` instead. `name` defaults to
-    `lower("<virtual_network_name>-<name>-nsg")`.
+    The network security group of the subnet. Null, the default, gives the subnet none.
+
+    - `id` = Associate a group that exists already. Nothing else is done to it.
+    - `name`, `location` = Create a group in `resource_group_name`, next to the virtual network, and associate it.
+    - `include_default_rules` = Only when creating. Whether to add the default rules. Defaults to true.
+    - `security_rules` = Only when creating. Rules on top of the default ones.
+
+    A created group gets the rules ./modules/nsg builds: its default rules, `security_rules`, and Azure
+    Bastion's for a subnet named AzureBastionSubnet. Whether a group is created is decided by `name`, so
+    `name` must be known at plan time. GatewaySubnet takes no group.
   EOT
+
+  validation {
+    condition     = var.network_security_group == null || (var.network_security_group.id != null) != (var.network_security_group.name != null)
+    error_message = "Give id, to associate a group that exists already, or name and location, to create one. Not both, and not neither."
+  }
+
+  validation {
+    condition     = var.network_security_group == null || var.network_security_group.name == null || var.network_security_group.location != null
+    error_message = "location is required to create a group."
+  }
+
+  validation {
+    condition     = var.network_security_group == null || var.network_security_group.id == null || (var.network_security_group.location == null && var.network_security_group.include_default_rules == null && length(var.network_security_group.security_rules) == 0)
+    error_message = "A group given by id is associated as it is: location, include_default_rules and security_rules are only for a group this module creates."
+  }
 
   validation {
     condition     = var.network_security_group == null || alltrue([for rule in values(var.network_security_group.security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
     error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
   }
-}
-
-variable "network_security_group_id" {
-  type        = string
-  default     = null
-  description = <<-EOT
-    The ID of a network security group that exists already, to associate with the subnet. Nothing
-    else is done to it. Use `network_security_group` instead to have one created. A subnet needs
-    one or the other, except GatewaySubnet, which takes neither.
-  EOT
 
   validation {
-    condition     = var.network_security_group_id == null || var.network_security_group == null
-    error_message = "Give network_security_group, to create a group, or network_security_group_id, to associate an existing one, not both."
-  }
-
-  validation {
-    condition     = var.name == "GatewaySubnet" || var.network_security_group != null || var.network_security_group_id != null
-    error_message = "A subnet needs a network security group: give network_security_group to create one, or network_security_group_id to associate an existing one. Only GatewaySubnet takes none."
-  }
-
-  validation {
-    condition     = var.name != "GatewaySubnet" || (var.network_security_group == null && var.network_security_group_id == null)
+    condition     = var.name != "GatewaySubnet" || var.network_security_group == null
     error_message = "GatewaySubnet takes no network security group: Azure does not support one there."
   }
 }

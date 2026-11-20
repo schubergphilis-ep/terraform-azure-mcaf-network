@@ -29,7 +29,9 @@ resource "azurerm_subnet" "this" {
 }
 
 locals {
-  create_nsg = var.network_security_group != null
+  # Created, as opposed to only associated, is told by `name` and not by `id`: an id can be unknown at
+  # plan time, and a count cannot depend on that.
+  create_nsg = var.network_security_group != null && var.network_security_group.name != null
 }
 
 # The group and its rules live in ./modules/nsg so the root module's shared group gets the same
@@ -38,14 +40,14 @@ module "nsg" {
   source = "../nsg"
   count  = local.create_nsg ? 1 : 0
 
-  name                = coalesce(var.network_security_group.name, lower("${var.virtual_network_name}-${var.name}-nsg"))
+  name                = var.network_security_group.name
   location            = var.network_security_group.location
   resource_group_name = var.resource_group_name
   tags                = var.tags
 
   subnet_name           = var.name
   security_rules        = var.network_security_group.security_rules
-  include_default_rules = var.network_security_group.include_default_rules
+  include_default_rules = coalesce(var.network_security_group.include_default_rules, true)
 
   default_rules                    = var.default_rules
   azure_bastion_security_rules     = var.azure_bastion_security_rules
@@ -55,14 +57,13 @@ module "nsg" {
 locals {
   # The created group's id only exists once its rules do, so attaching it never exposes a group
   # carrying just Azure's defaults.
-  nsg_id = local.create_nsg ? module.nsg[0].id : var.network_security_group_id
+  nsg_id = var.network_security_group == null ? null : (local.create_nsg ? module.nsg[0].id : var.network_security_group.id)
 }
 
 resource "azurerm_subnet_network_security_group_association" "this" {
-  # Every subnet but GatewaySubnet has a group, and the variable validation insists on it. The count
-  # therefore comes from the name, which is always known, and not from whether an id exists: the id of
-  # a group created in the same apply is unknown at plan time, and a count cannot depend on that.
-  count = var.name == "GatewaySubnet" ? 0 : 1
+  # Whether there is a group is told by the object being set, and not by its id: the id of a group
+  # created in the same apply is unknown at plan time, and a count cannot depend on that.
+  count = var.network_security_group != null ? 1 : 0
 
   subnet_id                 = azurerm_subnet.this.id
   network_security_group_id = local.nsg_id

@@ -36,7 +36,7 @@ run "plan" {
   command = plan
 
   assert {
-    condition     = module.nsg.name == "my-vnet-nsg" && contains(module.nsg.rule_names, "Deny-Any-Any-Any-In")
+    condition     = module.nsg[0].name == "my-vnet-nsg" && contains(module.nsg[0].rule_names, "Deny-Any-Any-Any-In")
     error_message = "the shared group should be named after the vnet and carry the default rules"
   }
 
@@ -85,6 +85,11 @@ run "vnet_only_no_subnets" {
   assert {
     condition     = length(output.all_subnets) == 0
     error_message = "the all_subnets output should be empty"
+  }
+
+  assert {
+    condition     = length(module.nsg) == 0
+    error_message = "no subnet uses the shared group, so it should not be created"
   }
 }
 
@@ -144,7 +149,31 @@ run "bastion_gets_its_own_nsg" {
   }
 }
 
-run "reject_no_nsg_association" {
+run "no_nsg_association_leaves_a_subnet_without_a_group" {
+  command = plan
+
+  variables {
+    subnets = {
+      "SharedSubnet" = { address_prefixes = ["100.0.1.0/24"] }
+      "BareSubnet" = {
+        address_prefixes   = ["100.0.5.0/24"]
+        no_nsg_association = true
+      }
+    }
+  }
+
+  assert {
+    condition     = module.subnet["BareSubnet"].network_security_group_id == null
+    error_message = "an opted-out subnet should have no group at all"
+  }
+
+  assert {
+    condition     = module.subnet["SharedSubnet"].network_security_group_id != null && length(module.nsg) == 1
+    error_message = "the other subnet should still use the shared group, which is created because it is used"
+  }
+}
+
+run "no_shared_group_when_every_subnet_opts_out" {
   command = plan
 
   variables {
@@ -152,6 +181,76 @@ run "reject_no_nsg_association" {
       "BareSubnet" = {
         address_prefixes   = ["100.0.5.0/24"]
         no_nsg_association = true
+      }
+    }
+  }
+
+  assert {
+    condition     = length(module.nsg) == 0
+    error_message = "a shared group nothing is associated with should not be created"
+  }
+}
+
+run "no_shared_group_with_only_a_gateway_subnet" {
+  command = plan
+
+  variables {
+    subnets = {
+      "GatewaySubnet" = { address_prefixes = ["100.0.8.0/27"] }
+    }
+  }
+
+  assert {
+    condition     = length(module.nsg) == 0
+    error_message = "GatewaySubnet takes no group, so the shared one has no user"
+  }
+}
+
+run "no_nsg_association_is_honoured_on_the_bastion_subnet" {
+  command = plan
+
+  variables {
+    subnets = {
+      "AzureBastionSubnet" = {
+        address_prefixes   = ["100.0.4.0/26"]
+        no_nsg_association = true
+      }
+    }
+  }
+
+  assert {
+    condition     = module.subnet["AzureBastionSubnet"].network_security_group_id == null && length(output.all_network_security_groups) == 0
+    error_message = "Bastion's group should not be created when the subnet opts out"
+  }
+}
+
+run "reject_no_nsg_association_with_a_group_of_its_own" {
+  command = plan
+
+  variables {
+    subnets = {
+      "OwnSubnet" = {
+        address_prefixes              = ["100.0.6.0/24"]
+        no_nsg_association            = true
+        create_network_security_group = true
+      }
+    }
+  }
+
+  expect_failures = [
+    var.subnets,
+  ]
+}
+
+run "reject_no_nsg_association_with_an_existing_group" {
+  command = plan
+
+  variables {
+    subnets = {
+      "OwnSubnet" = {
+        address_prefixes          = ["100.0.6.0/24"]
+        no_nsg_association        = true
+        network_security_group_id = "/subscriptions/0000/resourceGroups/example-rsg/providers/Microsoft.Network/networkSecurityGroups/existing"
       }
     }
   }

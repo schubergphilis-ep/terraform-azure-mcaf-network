@@ -7,6 +7,7 @@ locals {
     for k, v in var.subnets :
     k => v if(
       !v.create_network_security_group &&
+      !v.no_nsg_association &&
       !contains(["AzureBastionSubnet", "GatewaySubnet"], local.subnet_names[k])
     )
   }
@@ -30,11 +31,12 @@ locals {
     )
   }
 
-  # Every subnet gets exactly one group except GatewaySubnet, which gets none: the module either
-  # creates one for it, or is given the id of one that exists. Which rules a created group carries is
+  # A subnet has one group, or none: no_nsg_association and GatewaySubnet. The module either creates
+  # the group or is given the id of one that exists. Which rules a created group carries is
   # ./modules/nsg's business.
   subnet_network_security_group = {
     for key, subnet in var.subnets : key => (
+      subnet.no_nsg_association ? null :
       contains(keys(local.azure_bastion_subnet), key) ? {
         name                  = lower("${var.vnet_name}-${key}-nsg")
         location              = var.location
@@ -57,9 +59,10 @@ locals {
     )
   }
 
-  subnet_network_security_group_id = {
-    for key, subnet in var.subnets : key => (
-      contains(keys(local.default_subnets), key) ? coalesce(subnet.network_security_group_id, module.nsg.id) : null
-    )
+  # The shared group, or an existing one, for the subnets that do not create their own.
+  subnet_existing_network_security_group = {
+    for key, subnet in local.default_subnets : key => {
+      id = coalesce(subnet.network_security_group_id, one(module.nsg[*].id))
+    }
   }
 }
