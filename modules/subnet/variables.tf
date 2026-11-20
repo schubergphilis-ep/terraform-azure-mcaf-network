@@ -64,28 +64,25 @@ variable "network_security_group" {
     The network security group of the subnet. Null, the default, gives the subnet none.
 
     - `id` = Associate a group that exists already. Nothing else is done to it.
-    - `name`, `location` = Create a group in `resource_group_name`, next to the virtual network, and associate it.
+    - `location` = Create a group in `resource_group_name`, next to the virtual network, and associate it.
+    - `name` = Only when creating. Defaults to `lower("<virtual_network_name>-<name>-nsg")`.
     - `include_default_rules` = Only when creating. Whether to add the default rules. Defaults to true.
     - `security_rules` = Only when creating. Rules on top of the default ones.
 
     A created group gets the rules ./modules/nsg builds: its default rules, `security_rules`, and Azure
-    Bastion's for a subnet named AzureBastionSubnet. Whether a group is created is decided by `name`, so
-    `name` must be known at plan time. GatewaySubnet takes no group.
+    Bastion's for a subnet named AzureBastionSubnet. Whether a group is created is decided by `name` or
+    `location`, so one of them must be known at plan time: `location` when `name` is left out. GatewaySubnet
+    takes no group.
   EOT
 
   validation {
-    condition     = var.network_security_group == null || (var.network_security_group.id != null) != (var.network_security_group.name != null)
-    error_message = "Give id, to associate a group that exists already, or name and location, to create one. Not both, and not neither."
+    condition     = var.network_security_group == null || (var.network_security_group.id != null) != (var.network_security_group.location != null)
+    error_message = "Give id, to associate a group that exists already, or location, to create one. Not both, and not neither."
   }
 
   validation {
-    condition     = var.network_security_group == null || var.network_security_group.name == null || var.network_security_group.location != null
-    error_message = "location is required to create a group."
-  }
-
-  validation {
-    condition     = var.network_security_group == null || var.network_security_group.id == null || (var.network_security_group.location == null && var.network_security_group.include_default_rules == null && length(var.network_security_group.security_rules) == 0)
-    error_message = "A group given by id is associated as it is: location, include_default_rules and security_rules are only for a group this module creates."
+    condition     = var.network_security_group == null || var.network_security_group.id == null || (var.network_security_group.name == null && var.network_security_group.include_default_rules == null && length(var.network_security_group.security_rules) == 0)
+    error_message = "A group given by id is associated as it is: name, include_default_rules and security_rules are only for a group this module creates."
   }
 
   validation {

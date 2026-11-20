@@ -456,7 +456,7 @@ run "an_explicit_private_endpoint_policy_wins" {
   }
 }
 
-run "reject_a_group_with_neither_an_id_nor_a_name" {
+run "reject_a_group_with_neither_an_id_nor_a_location" {
   command = plan
 
   module {
@@ -466,7 +466,7 @@ run "reject_a_group_with_neither_an_id_nor_a_name" {
   variables {
     name                   = "NodeSubnet"
     address_prefixes       = ["100.0.1.0/24"]
-    network_security_group = { location = "westeurope" }
+    network_security_group = {}
   }
 
   expect_failures = [
@@ -522,4 +522,44 @@ run "reject_creation_attributes_on_a_group_given_by_id" {
   expect_failures = [
     var.network_security_group,
   ]
+}
+
+run "reject_a_name_on_a_group_given_by_id" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    network_security_group = {
+      id   = "/subscriptions/0000/resourceGroups/rg-platform-network/providers/Microsoft.Network/networkSecurityGroups/vnet-platform-nsg"
+      name = "ignored"
+    }
+  }
+
+  expect_failures = [
+    var.network_security_group,
+  ]
+}
+
+run "the_group_is_named_after_the_vnet_and_subnet_by_default" {
+  command = plan
+
+  module {
+    source = "./modules/subnet"
+  }
+
+  variables {
+    name                   = "NodeSubnet"
+    address_prefixes       = ["100.0.1.0/24"]
+    network_security_group = { location = "westeurope" }
+  }
+
+  assert {
+    condition     = module.nsg[0].name == "vnet-platform-nodesubnet-nsg"
+    error_message = "the default name should be lower(<virtual_network_name>-<name>-nsg), as the root module names per-subnet groups"
+  }
 }

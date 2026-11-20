@@ -29,9 +29,10 @@ resource "azurerm_subnet" "this" {
 }
 
 locals {
-  # Created, as opposed to only associated, is told by `name` and not by `id`: an id can be unknown at
-  # plan time, and a count cannot depend on that.
-  create_nsg = var.network_security_group != null && var.network_security_group.name != null
+  # Created, as opposed to only associated, is told by `name` or `location` and not by `id`: an id can
+  # be unknown at plan time, and a count cannot depend on that. shortcut: with `name` left out, an
+  # unknown `location` fails the count; the caller then sets `name` or passes a known location.
+  create_nsg = var.network_security_group != null && (var.network_security_group.name != null || var.network_security_group.location != null)
 }
 
 # The group and its rules live in ./modules/nsg so the root module's shared group gets the same
@@ -40,7 +41,7 @@ module "nsg" {
   source = "../nsg"
   count  = local.create_nsg ? 1 : 0
 
-  name                = var.network_security_group.name
+  name                = coalesce(var.network_security_group.name, lower("${var.virtual_network_name}-${var.name}-nsg"))
   location            = var.network_security_group.location
   resource_group_name = var.resource_group_name
   tags                = var.tags
