@@ -7,16 +7,12 @@ resource "azurerm_nat_gateway" "this" {
   sku_name            = var.natgateway.sku
   zones               = var.natgateway.zones
 
-  tags = merge(
-    try(var.tags),
-    tomap({
-      "Resource Type" = "NAT Gateway"
-    })
-  )
+  tags = var.tags
 }
 
 resource "azurerm_public_ip" "this" {
-  count = var.natgateway != null && var.public_ip != null ? 1 : 0
+  # A public IP passed in by id is the one used, so there is nothing to create beside it.
+  count = var.natgateway != null && var.public_ip != null && var.natgateway.public_ip_address_id == null ? 1 : 0
 
   name                = var.public_ip.name == null ? "${var.natgateway.name}-pip" : var.public_ip.name
   location            = azurerm_virtual_network.this.location
@@ -27,12 +23,7 @@ resource "azurerm_public_ip" "this" {
   sku_tier            = var.public_ip.sku_tier
   zones               = var.public_ip.zones == null ? var.natgateway.zones : var.public_ip.zones
 
-  tags = merge(
-    try(var.tags),
-    tomap({
-      "Resource Type" = "Public IP"
-    })
-  )
+  tags = var.tags
 }
 
 resource "azurerm_nat_gateway_public_ip_association" "this" {
@@ -43,8 +34,8 @@ resource "azurerm_nat_gateway_public_ip_association" "this" {
 }
 
 resource "azurerm_subnet_nat_gateway_association" "this" {
-  for_each = var.natgateway != null ? { for k, v in var.subnets : k => v if k != "GatewaySubnet" } : {}
+  for_each = var.natgateway != null ? { for k, v in var.subnets : k => v if local.subnet_names[k] != "GatewaySubnet" } : {}
 
-  subnet_id      = azurerm_subnet.this[each.key].id
+  subnet_id      = module.subnet[each.key].id
   nat_gateway_id = azurerm_nat_gateway.this[0].id
 }
