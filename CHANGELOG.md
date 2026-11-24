@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v2.0.0...v3.0.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* subnet, association, group and rule addresses change, so add one moved block per subnet key before upgrading (see UPGRADE.md). route_table now takes effect.
+
+### 🚀 Features
+
+* extract subnets and security groups into ./modules/subnet and ./modules/nsg ([#10](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/issues/10)) ([0aff316](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/commit/0aff316eb9e8e4a6a1e0e92e6e6305b39006152f))
+
 ## [2.0.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-network/compare/v1.0.1...v2.0.0) (2026-10-09)
 
 
