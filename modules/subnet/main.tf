@@ -1,7 +1,7 @@
 resource "azurerm_subnet" "this" {
   name                                          = var.name
   resource_group_name                           = var.resource_group_name
-  virtual_network_name                          = var.virtual_network_name
+  virtual_network_name                          = var.virtual_network.name
   address_prefixes                              = var.address_prefixes
   default_outbound_access_enabled               = var.default_outbound_access_enabled
   private_endpoint_network_policies             = var.name == "GatewaySubnet" ? "Disabled" : var.private_endpoint_network_policies
@@ -29,10 +29,7 @@ resource "azurerm_subnet" "this" {
 }
 
 locals {
-  # Created, as opposed to only associated, is told by `name` or `location` and not by `id`: an id can
-  # be unknown at plan time, and a count cannot depend on that. shortcut: with `name` left out, an
-  # unknown `location` fails the count; the caller then sets `name` or passes a known location.
-  create_nsg = var.network_security_group != null && (var.network_security_group.name != null || var.network_security_group.location != null)
+  create_nsg = var.network_security_group != null
 }
 
 # The group and its rules live in ./modules/nsg so the root module's shared group gets the same
@@ -41,14 +38,14 @@ module "nsg" {
   source = "../nsg"
   count  = local.create_nsg ? 1 : 0
 
-  name                = coalesce(var.network_security_group.name, lower("${var.virtual_network_name}-${var.name}-nsg"))
-  location            = var.network_security_group.location
+  name                = coalesce(var.network_security_group.name, lower("${var.virtual_network.name}-${var.name}-nsg"))
+  location            = var.virtual_network.location
   resource_group_name = var.resource_group_name
   tags                = var.tags
 
   subnet_name           = var.name
   security_rules        = var.network_security_group.security_rules
-  include_default_rules = coalesce(var.network_security_group.include_default_rules, true)
+  include_default_rules = var.network_security_group.include_default_rules
 
   default_rules                    = var.default_rules
   azure_bastion_security_rules     = var.azure_bastion_security_rules
@@ -58,13 +55,13 @@ module "nsg" {
 locals {
   # The created group's id only exists once its rules do, so attaching it never exposes a group
   # carrying just Azure's defaults.
-  nsg_id = var.network_security_group == null ? null : (local.create_nsg ? module.nsg[0].id : var.network_security_group.id)
+  nsg_id = local.create_nsg ? module.nsg[0].id : (var.existing_network_security_group == null ? null : var.existing_network_security_group.id)
 }
 
 resource "azurerm_subnet_network_security_group_association" "this" {
-  # Whether there is a group is told by the object being set, and not by its id: the id of a group
-  # created in the same apply is unknown at plan time, and a count cannot depend on that.
-  count = var.network_security_group != null ? 1 : 0
+  # Whether there is a group is told by an object being set, and not by an id: the id of a group created
+  # in the same apply is unknown at plan time, and a count cannot depend on that.
+  count = local.create_nsg || var.existing_network_security_group != null ? 1 : 0
 
   subnet_id                 = azurerm_subnet.this.id
   network_security_group_id = local.nsg_id

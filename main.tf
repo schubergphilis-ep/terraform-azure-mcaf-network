@@ -12,10 +12,10 @@ module "subnet" {
   source   = "./modules/subnet"
   for_each = var.subnets
 
-  name                 = each.value.name != null ? each.value.name : each.key
-  resource_group_name  = azurerm_virtual_network.this.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = each.value.address_prefixes
+  name                = each.value.name != null ? each.value.name : each.key
+  resource_group_name = azurerm_virtual_network.this.resource_group_name
+  virtual_network     = azurerm_virtual_network.this
+  address_prefixes    = each.value.address_prefixes
 
   # The submodule needs this to create a group of its own.
   tags = var.tags
@@ -24,10 +24,10 @@ module "subnet" {
   azure_bastion_security_rules     = var.azure_bastion_security_rules
   azure_bastion_source_ip_prefixes = var.azure_bastion_source_ip_prefixes
 
-  # A group to create, or the id of one that exists (the vnet-wide one unless the subnet names its
-  # own), or none.
-  network_security_group = lookup(local.subnet_existing_network_security_group, each.key, local.subnet_network_security_group[each.key])
-  route_table_id         = each.value.route_table == null ? null : each.value.route_table.id
+  # A group to create, or one that exists (the vnet-wide one unless the subnet names its own), or none.
+  network_security_group          = local.subnet_network_security_group[each.key]
+  existing_network_security_group = local.subnet_existing_network_security_group[each.key]
+  route_table_id                  = each.value.route_table == null ? null : each.value.route_table.id
 
   default_outbound_access_enabled               = each.value.default_outbound_access_enabled
   delegate_to                                   = each.value.delegate_to

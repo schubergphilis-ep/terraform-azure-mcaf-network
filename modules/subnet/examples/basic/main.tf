@@ -14,23 +14,21 @@ provider "azurerm" {
 }
 
 # One subnet in a virtual network that is managed elsewhere, with a network security group of its
-# own: the default rules, plus one of ours.
+# own: the default rules, plus one of ours. The group is named my-vnet-appsubnet-nsg and created in the
+# virtual network's location.
 module "subnet" {
   source = "../.."
 
-  name                 = "AppSubnet"
-  resource_group_name  = "example-rsg"
-  virtual_network_name = "my-vnet"
-  address_prefixes     = ["10.0.1.0/24"]
+  name                = "AppSubnet"
+  resource_group_name = "example-rsg"
+  virtual_network     = { name = "my-vnet", location = "westeurope" }
+  address_prefixes    = ["10.0.1.0/24"]
 
   tags = {
     Environment = "Production"
   }
 
   network_security_group = {
-    name     = "my-vnet-appsubnet-nsg"
-    location = "westeurope"
-
     security_rules = {
       "Allow-Https-In-From-Office" = {
         priority                     = 200

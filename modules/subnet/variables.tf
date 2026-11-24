@@ -10,10 +10,13 @@ variable "resource_group_name" {
   nullable    = false
 }
 
-variable "virtual_network_name" {
-  type        = string
-  description = "Name of the virtual network to create the subnet in. The network may be managed elsewhere; this module never creates or modifies it."
+variable "virtual_network" {
+  type = object({
+    name     = string
+    location = string
+  })
   nullable    = false
+  description = "The virtual network to create the subnet in. It may be managed elsewhere; this module never creates or modifies it. A group this module creates is placed in its location. An `azurerm_virtual_network` resource or data source can be passed as it is."
 }
 
 variable "address_prefixes" {
@@ -35,10 +38,8 @@ variable "tags" {
 
 variable "network_security_group" {
   type = object({
-    id                    = optional(string)
     name                  = optional(string)
-    location              = optional(string)
-    include_default_rules = optional(bool)
+    include_default_rules = optional(bool, true)
     security_rules = optional(map(object({
       priority                                   = number
       direction                                  = string
@@ -61,37 +62,45 @@ variable "network_security_group" {
   })
   default     = null
   description = <<-EOT
-    The network security group of the subnet. Null, the default, gives the subnet none.
+    A network security group for this module to create and associate with the subnet, in
+    `resource_group_name` and the location of `virtual_network`. `{}` creates one with the defaults.
+    Null, the default, creates none. To associate a group that exists already, use
+    `existing_network_security_group` instead.
 
-    - `id` = Associate a group that exists already. Nothing else is done to it.
-    - `location` = Create a group in `resource_group_name`, next to the virtual network, and associate it.
-    - `name` = Only when creating. Defaults to `lower("<virtual_network_name>-<name>-nsg")`.
-    - `include_default_rules` = Only when creating. Whether to add the default rules. Defaults to true.
-    - `security_rules` = Only when creating. Rules on top of the default ones.
+    - `name` = Defaults to `lower("<virtual_network.name>-<name>-nsg")`.
+    - `include_default_rules` = Whether to add the default rules. Defaults to true.
+    - `security_rules` = Rules on top of the default ones.
 
-    A created group gets the rules ./modules/nsg builds: its default rules, `security_rules`, and Azure
-    Bastion's for a subnet named AzureBastionSubnet. Whether a group is created is decided by `name` or
-    `location`, so one of them must be known at plan time: `location` when `name` is left out. GatewaySubnet
-    takes no group.
+    The group gets the rules ./modules/nsg builds: its default rules, `security_rules`, and Azure
+    Bastion's for a subnet named AzureBastionSubnet.
   EOT
-
-  validation {
-    condition     = var.network_security_group == null || (var.network_security_group.id != null) != (var.network_security_group.location != null)
-    error_message = "Give id, to associate a group that exists already, or location, to create one. Not both, and not neither."
-  }
-
-  validation {
-    condition     = var.network_security_group == null || var.network_security_group.id == null || (var.network_security_group.name == null && var.network_security_group.include_default_rules == null && length(var.network_security_group.security_rules) == 0)
-    error_message = "A group given by id is associated as it is: name, include_default_rules and security_rules are only for a group this module creates."
-  }
 
   validation {
     condition     = var.network_security_group == null || alltrue([for rule in values(var.network_security_group.security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
     error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
   }
+}
+
+variable "existing_network_security_group" {
+  type = object({
+    id = string
+  })
+  default     = null
+  description = <<-EOT
+    A network security group that exists already, to associate with the subnet. Nothing else is done
+    to it. An `azurerm_network_security_group` resource or data source can be passed as it is. This is
+    an object, and not just the id, so that whether one is given is known at plan time even when the id
+    is only known after apply. Use `network_security_group` instead to have one created. A subnet has at
+    most one of the two. GatewaySubnet takes neither.
+  EOT
 
   validation {
-    condition     = var.name != "GatewaySubnet" || var.network_security_group == null
+    condition     = var.existing_network_security_group == null || var.network_security_group == null
+    error_message = "Give network_security_group, to create a group, or existing_network_security_group, to associate one that exists already, not both."
+  }
+
+  validation {
+    condition     = var.name != "GatewaySubnet" || (var.network_security_group == null && var.existing_network_security_group == null)
     error_message = "GatewaySubnet takes no network security group: Azure does not support one there."
   }
 }

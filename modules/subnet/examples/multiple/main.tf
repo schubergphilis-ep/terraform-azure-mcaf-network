@@ -13,7 +13,13 @@ provider "azurerm" {
   features {}
 }
 
-# A network security group that exists already and is shared by most of the subnets below.
+# The virtual network and a network security group that both exist already. A resource or data source
+# is passed to the module as it is.
+data "azurerm_virtual_network" "this" {
+  name                = "my-vnet"
+  resource_group_name = "example-rsg"
+}
+
 resource "azurerm_network_security_group" "shared" {
   name                = "my-vnet-nsg"
   location            = "westeurope"
@@ -23,14 +29,14 @@ resource "azurerm_network_security_group" "shared" {
 locals {
   subnets = {
     # Own group, with the default rules.
-    "AppSubnet" = { address_prefixes = ["10.0.1.0/24"], group = { name = "my-vnet-appsubnet-nsg", location = "westeurope" } }
+    "AppSubnet" = { address_prefixes = ["10.0.1.0/24"], network_security_group = {} }
 
     # The shared group.
-    "DataSubnet" = { address_prefixes = ["10.0.2.0/24"], service_endpoints = ["Microsoft.Sql"], group = { id = azurerm_network_security_group.shared.id } }
-    "AciSubnet"  = { address_prefixes = ["10.0.3.0/24"], delegate_to = "Microsoft.ContainerInstance/containerGroups", group = { id = azurerm_network_security_group.shared.id } }
+    "DataSubnet" = { address_prefixes = ["10.0.2.0/24"], service_endpoints = ["Microsoft.Sql"], existing_network_security_group = azurerm_network_security_group.shared }
+    "AciSubnet"  = { address_prefixes = ["10.0.3.0/24"], delegate_to = "Microsoft.ContainerInstance/containerGroups", existing_network_security_group = azurerm_network_security_group.shared }
 
     # Named like this, it gets Azure Bastion's rules on top of the defaults.
-    "AzureBastionSubnet" = { address_prefixes = ["10.0.4.0/26"], group = { name = "my-vnet-azurebastionsubnet-nsg", location = "westeurope" } }
+    "AzureBastionSubnet" = { address_prefixes = ["10.0.4.0/26"], network_security_group = {} }
 
     # No group. GatewaySubnet has to go without, because Azure does not support one there, and any
     # other subnet can too.
@@ -43,16 +49,18 @@ module "subnet" {
   source   = "../.."
   for_each = local.subnets
 
-  name                 = each.key
-  resource_group_name  = "example-rsg"
-  virtual_network_name = "my-vnet"
-  address_prefixes     = each.value.address_prefixes
-  delegate_to          = try(each.value.delegate_to, null)
-  service_endpoints    = try(each.value.service_endpoints, null)
+  name                = each.key
+  resource_group_name = "example-rsg"
+  virtual_network     = data.azurerm_virtual_network.this
+  address_prefixes    = each.value.address_prefixes
+  delegate_to         = try(each.value.delegate_to, null)
+  service_endpoints   = try(each.value.service_endpoints, null)
 
-  # A group to create (name, location), the id of one that exists, or null for none. lookup() and not
-  # try(): try() turns a group whose id is only known after apply into an unknown value as a whole.
-  network_security_group = lookup(each.value, "group", null)
+  # A group to create, one that exists, or neither. lookup() and not try(): try() turns a value that
+  # holds something only known after apply into an unknown value as a whole, and then whether a group is
+  # given is unknown too.
+  network_security_group          = lookup(each.value, "network_security_group", null)
+  existing_network_security_group = lookup(each.value, "existing_network_security_group", null)
 }
 
 output "subnet_ids" {
