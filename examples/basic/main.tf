@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.7"
+  required_version = ">= 1.9"
 
   required_providers {
     azurerm = {
@@ -47,6 +47,14 @@ module "network_ngw" {
   }
 }
 
+resource "azurerm_public_ip" "byoip" {
+  name                = "my-byoip"
+  location            = "eastus"
+  resource_group_name = "example-rsg"
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
 module "network_ngw_byoip" {
   source = "../.."
 
@@ -57,7 +65,7 @@ module "network_ngw_byoip" {
 
   natgateway = {
     name                 = "my-nat-gw"
-    public_ip_address_id = "azurerm_public_ip.this.id"
+    public_ip_address_id = azurerm_public_ip.byoip.id
   }
 
   public_ip = null

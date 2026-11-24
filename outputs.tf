@@ -11,7 +11,7 @@ output "vnet_id" {
 output "subnets" {
   description = "A map of subnet names to their corresponding names, IDs and address prefixes"
   value = {
-    for subnet in azurerm_subnet.this : subnet.name => {
+    for subnet in module.subnet : subnet.name => {
       name             = subnet.name
       id               = subnet.id
       address_prefixes = subnet.address_prefixes
@@ -31,29 +31,34 @@ output "private_dns_zone_list" {
 
 output "all_subnets" {
   description = "A list of all subnets created"
-  value = [for subnet in azurerm_subnet.this : {
+  value = [for subnet in module.subnet : {
     name = subnet.name
     id   = subnet.id
   }]
 }
 
 output "all_network_security_groups" {
-  description = "A map of all network security groups created keyed by subnet"
-  value = { for subnet, nsg in local.all_custom_network_security_groups : subnet => {
-    name     = nsg.name
-    id       = nsg.id
-    location = nsg.location
-  } }
+  description = "The network security groups created for individual subnets, keyed by subnet key. The shared group is not in it."
+  value = {
+    for key, subnet in module.subnet : key => {
+      name     = subnet.network_security_group_name
+      id       = subnet.network_security_group_id
+      location = subnet.network_security_group_location
+    } if subnet.network_security_group_name != null
+  }
 }
 
 output "subnets_with_nsg" {
-  value = local.subnets_with_nsg
+  description = "The subnets that asked for a network security group of their own."
+  value       = local.subnets_with_nsg
 }
 
 output "subnets_with_nsg_azure_default" {
-  value = local.subnets_with_nsg_azure_default
+  description = "The subnets whose own group keeps only Azure's default rules plus `security_rules`."
+  value       = local.subnets_with_nsg_azure_default
 }
 
 output "subnets_with_default_nsg" {
-  value = local.default_subnets
+  description = "The subnets that use the shared group, or an existing one passed as `network_security_group_id`."
+  value       = local.default_subnets
 }
