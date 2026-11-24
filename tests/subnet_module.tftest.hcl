@@ -281,24 +281,6 @@ run "a_group_can_skip_the_default_rules" {
   }
 }
 
-run "a_subnet_can_have_no_network_security_group" {
-  command = plan
-
-  module {
-    source = "./modules/subnet"
-  }
-
-  variables {
-    name             = "NodeSubnet"
-    address_prefixes = ["100.0.1.0/24"]
-  }
-
-  assert {
-    condition     = length(azurerm_subnet_network_security_group_association.this) == 0 && length(module.nsg) == 0 && output.network_security_group_id == null
-    error_message = "a null network_security_group should create and associate nothing"
-  }
-}
-
 run "reject_both_a_new_and_an_existing_network_security_group" {
   command = plan
 
@@ -314,7 +296,7 @@ run "reject_both_a_new_and_an_existing_network_security_group" {
   }
 
   expect_failures = [
-    var.existing_network_security_group,
+    var.network_security_group,
   ]
 }
 
@@ -364,11 +346,11 @@ run "reject_creating_a_network_security_group_on_the_gateway_subnet" {
   variables {
     name                   = "GatewaySubnet"
     address_prefixes       = ["100.0.8.0/27"]
-    network_security_group = {}
+    network_security_group = { name = "gw-nsg" }
   }
 
   expect_failures = [
-    var.existing_network_security_group,
+    var.network_security_group,
   ]
 }
 
@@ -468,7 +450,7 @@ run "an_explicit_private_endpoint_policy_wins" {
   }
 }
 
-run "an_empty_group_is_created_with_the_defaults_and_a_derived_name" {
+run "a_group_is_created_with_the_defaults_when_none_is_given" {
   command = plan
 
   module {
@@ -476,9 +458,8 @@ run "an_empty_group_is_created_with_the_defaults_and_a_derived_name" {
   }
 
   variables {
-    name                   = "NodeSubnet"
-    address_prefixes       = ["100.0.1.0/24"]
-    network_security_group = {}
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
   }
 
   assert {
@@ -500,10 +481,9 @@ run "the_group_is_created_in_the_virtual_networks_location" {
   }
 
   variables {
-    name                   = "NodeSubnet"
-    address_prefixes       = ["100.0.1.0/24"]
-    virtual_network        = { name = "vnet-platform", location = "northeurope" }
-    network_security_group = {}
+    name             = "NodeSubnet"
+    address_prefixes = ["100.0.1.0/24"]
+    virtual_network  = { name = "vnet-platform", location = "northeurope" }
   }
 
   assert {
@@ -528,7 +508,6 @@ run "a_virtual_network_resource_can_be_passed_as_it_is" {
       location      = "westeurope"
       address_space = ["10.0.0.0/16"]
     }
-    network_security_group = {}
   }
 
   assert {

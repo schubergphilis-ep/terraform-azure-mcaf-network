@@ -29,7 +29,9 @@ resource "azurerm_subnet" "this" {
 }
 
 locals {
-  create_nsg = var.network_security_group != null
+  # Both objects are set or not, whatever their contents, so this is known at plan time. An existing group
+  # takes the place of a created one, and GatewaySubnet has none.
+  create_nsg = var.network_security_group != null && var.existing_network_security_group == null && var.name != "GatewaySubnet"
 }
 
 # The group and its rules live in ./modules/nsg so the root module's shared group gets the same

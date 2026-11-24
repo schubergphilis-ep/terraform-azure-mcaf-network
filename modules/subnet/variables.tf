@@ -60,12 +60,12 @@ variable "network_security_group" {
       }))
     })), {})
   })
-  default     = null
+  default     = {}
   description = <<-EOT
     A network security group for this module to create and associate with the subnet, in
-    `resource_group_name` and the location of `virtual_network`. `{}` creates one with the defaults.
-    Null, the default, creates none. To associate a group that exists already, use
-    `existing_network_security_group` instead.
+    `resource_group_name` and the location of `virtual_network`. The default, `{}`, creates one with the
+    default rules. Null creates none. Not used on GatewaySubnet, which takes no group, nor when
+    `existing_network_security_group` is given, which takes its place.
 
     - `name` = Defaults to `lower("<virtual_network.name>-<name>-nsg")`.
     - `include_default_rules` = Whether to add the default rules. Defaults to true.
@@ -79,6 +79,11 @@ variable "network_security_group" {
     condition     = var.network_security_group == null || alltrue([for rule in values(var.network_security_group.security_rules) : alltrue([for list in [rule.source_port_ranges, rule.destination_port_ranges, rule.source_address_prefixes, rule.destination_address_prefixes] : length(list) > 0])])
     error_message = "Every rule needs at least one entry in each of source_port_ranges, destination_port_ranges, source_address_prefixes and destination_address_prefixes."
   }
+
+  validation {
+    condition     = var.network_security_group == null || (var.network_security_group.name == null && var.network_security_group.include_default_rules && length(var.network_security_group.security_rules) == 0) || (var.existing_network_security_group == null && var.name != "GatewaySubnet")
+    error_message = "A network_security_group that sets anything has no effect with existing_network_security_group, which is associated as it is, or on GatewaySubnet, which takes no group. Remove it."
+  }
 }
 
 variable "existing_network_security_group" {
@@ -91,16 +96,12 @@ variable "existing_network_security_group" {
     to it. An `azurerm_network_security_group` resource or data source can be passed as it is. This is
     an object, and not just the id, so that whether one is given is known at plan time even when the id
     is only known after apply. Use `network_security_group` instead to have one created. A subnet has at
-    most one of the two. GatewaySubnet takes neither.
+    most one group, so this takes the place of the one `network_security_group` would create.
+    GatewaySubnet takes none.
   EOT
 
   validation {
-    condition     = var.existing_network_security_group == null || var.network_security_group == null
-    error_message = "Give network_security_group, to create a group, or existing_network_security_group, to associate one that exists already, not both."
-  }
-
-  validation {
-    condition     = var.name != "GatewaySubnet" || (var.network_security_group == null && var.existing_network_security_group == null)
+    condition     = var.name != "GatewaySubnet" || var.existing_network_security_group == null
     error_message = "GatewaySubnet takes no network security group: Azure does not support one there."
   }
 }
